@@ -1,7 +1,7 @@
 {
   "name": "fd-palette",
   "displayName": "fd Palette",
-  "description": "System-wide directory search using fd with workspace integration",
+  "description": "System-wide directory search using fd with workspace integration.",
   "version": "0.1.0",
   "publisher": "fd-palette-dev",
   "repository": {
