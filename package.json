@@ -33,7 +33,12 @@
 				"category": "Rip Add"
 			},
 			{
-				"command": "rip-add.openInWindow",
+				"command": "rip-add.openInCurrentWindow",
+				"title": "Open Directory in Current Window",
+				"category": "Rip Add"
+			},
+			{
+				"command": "rip-add.openInNewWindow",
 				"title": "Open Directory in New Window",
 				"category": "Rip Add"
 			},
@@ -55,9 +60,14 @@
 				"mac": "cmd+alt+d"
 			},
 			{
-				"command": "rip-add.openInWindow",
-				"key": "ctrl+alt+shift+d",
-				"mac": "cmd+alt+shift+d"
+				"command": "rip-add.openInCurrentWindow",
+				"key": "ctrl+alt+o",
+				"mac": "cmd+alt+o"
+			},
+			{
+				"command": "rip-add.openInNewWindow",
+				"key": "ctrl+alt+shift+o",
+				"mac": "cmd+alt+shift+o"
 			}
 		],
 		"configuration": {

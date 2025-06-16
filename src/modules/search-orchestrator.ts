@@ -7,16 +7,22 @@ import { DirectoryAction, DirectoryItem } from "./types";
 
 export class SearchOrchestrator {
 	constructor(private cacheManager: CacheManager) {}
-
 	async searchAndAddDirectories(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.AddToWorkspace);
 	}
 
-	async searchAndOpenInWindow(): Promise<void> {
-		await this.performDirectorySearch(DirectoryAction.OpenInWindow);
+	async searchAndOpenInCurrentWindow(): Promise<void> {
+		await this.performDirectorySearch(DirectoryAction.OpenInWindow, false);
 	}
 
-	private async performDirectorySearch(action: DirectoryAction): Promise<void> {
+	async searchAndOpenInNewWindow(): Promise<void> {
+		await this.performDirectorySearch(DirectoryAction.OpenInWindow, true);
+	}
+
+	private async performDirectorySearch(
+		action: DirectoryAction,
+		forceNewWindow: boolean = false
+	): Promise<void> {
 		const searchParams = ConfigurationManager.getSearchParams();
 
 		// Check cache first with background refresh capability
@@ -28,7 +34,11 @@ export class SearchOrchestrator {
 			console.log(
 				`rip-add: Using cached results (${cachedDirectories.length} directories) - background refresh may be triggered`
 			);
-			await DirectoryPicker.showDirectoryPicker(cachedDirectories, action);
+			await DirectoryPicker.showDirectoryPicker(
+				cachedDirectories,
+				action,
+				forceNewWindow
+			);
 			return;
 		}
 
@@ -94,14 +104,19 @@ export class SearchOrchestrator {
 					);
 
 					// Show the directory picker
-					await DirectoryPicker.showDirectoryPicker(directories, action);
+					await DirectoryPicker.showDirectoryPicker(
+						directories,
+						action,
+						forceNewWindow
+					);
 				} catch (error) {
 					if (error instanceof Error && error.message.includes("cancelled")) {
 						// User cancelled the operation
 						return;
 					}
 					console.error("Error during directory search:", error);
-					vscode.window.showErrorMessage(`Search failed: ${error}`);				}
+					vscode.window.showErrorMessage(`Search failed: ${error}`);
+				}
 			}
 		);
 	}

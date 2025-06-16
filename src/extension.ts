@@ -21,8 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// Initialize services
 	const configManager = new ConfigurationManager();
 	cacheManager = new CacheManager(context);
-	searchOrchestrator = new SearchOrchestrator(cacheManager);
-	// Start cache preloading in background
+	searchOrchestrator = new SearchOrchestrator(cacheManager); // Start cache preloading in background
 	cacheManager.preloadCacheInBackground();
 
 	// Register commands
@@ -33,27 +32,38 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	);
 
-	const openInWindowCommand = vscode.commands.registerCommand(
-		"rip-add.openInWindow",
+	const openInCurrentWindowCommand = vscode.commands.registerCommand(
+		"rip-add.openInCurrentWindow",
 		async () => {
-			await searchOrchestrator.searchAndOpenInWindow();
+			await searchOrchestrator.searchAndOpenInCurrentWindow();
 		}
 	);
+
+	const openInNewWindowCommand = vscode.commands.registerCommand(
+		"rip-add.openInNewWindow",
+		async () => {
+			await searchOrchestrator.searchAndOpenInNewWindow();
+		}
+	);
+
 	const clearCacheCommand = vscode.commands.registerCommand(
 		"rip-add.clearCache",
 		async () => {
 			cacheManager.clearCache();
 		}
 	);
+
 	const resetSettingsCommand = vscode.commands.registerCommand(
-		"rip-add.resetSettings",		async () => {
+		"rip-add.resetSettings",
+		async () => {
 			await ConfigurationManager.resetSettingsToDefault();
 		}
 	);
 
 	context.subscriptions.push(
 		addToWorkspaceCommand,
-		openInWindowCommand,
+		openInCurrentWindowCommand,
+		openInNewWindowCommand,
 		clearCacheCommand,
 		resetSettingsCommand
 	);

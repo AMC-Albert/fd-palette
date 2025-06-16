@@ -46,11 +46,12 @@ export class WorkspaceManager {
 			vscode.window.showErrorMessage("Failed to add directories to workspace.");
 		}
 	}
-
 	static async openDirectoriesInNewWindow(
-		directories: DirectoryItem[]
+		directories: DirectoryItem[],
+		forceNewWindow: boolean = false
 	): Promise<void> {
-		const openInWindow = ConfigurationManager.shouldopenInWindow();
+		// Use the forceNewWindow parameter directly instead of config
+		const openInWindow = forceNewWindow;
 
 		if (directories.length === 1) {
 			// Single directory - open it directly

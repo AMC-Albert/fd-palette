@@ -58,8 +58,9 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 | Command | Default Keybinding | Description |
 |---------|-------------------|-------------|
 | `Rip Add: Add Directories to Workspace` | `Ctrl+Alt+D` | Search and add to workspace |
-| `Rip Add: Open Directory in New Window` | `Ctrl+Alt+Shift+D` | Search and open in new window |
-| `Rip Add: Clear Search Cache` | - | Force cache refresh 
+| `Rip Add: Open Directory in Current Window` | `Ctrl+Alt+O` | Search and open in current window |
+| `Rip Add: Open Directory in New Window` | `Ctrl+Alt+Shift+O` | Search and open in new window |
+| `Rip Add: Clear Search Cache` | - | Force cache refresh |
 
 ## Performance Notes
 

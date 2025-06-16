@@ -6,10 +6,10 @@ import { ConfigurationManager } from "./configuration";
 import { DirectorySearcher } from "./directory-search";
 import { DirectoryFilter } from "./filter";
 
-export class DirectoryPicker {
-	static async showDirectoryPicker(
+export class DirectoryPicker {	static async showDirectoryPicker(
 		directories: DirectoryItem[],
-		action: DirectoryAction = DirectoryAction.AddToWorkspace
+		action: DirectoryAction = DirectoryAction.AddToWorkspace,
+		forceNewWindow: boolean = false
 	): Promise<void> {
 		// Check if fzf is available for enhanced filtering
 		const isFzfEnabled = ConfigurationManager.isFzfEnabled();
@@ -157,9 +157,9 @@ export class DirectoryPicker {
 			if (itemsToProcess.length > 0) {
 				try {
 					if (action === DirectoryAction.AddToWorkspace) {
-						await WorkspaceManager.addDirectoriesToWorkspace(itemsToProcess);
-					} else {
-						await WorkspaceManager.openDirectoriesInNewWindow(itemsToProcess);
+						await WorkspaceManager.addDirectoriesToWorkspace(itemsToProcess);					} else {
+						// For OpenInWindow action, use the forceNewWindow parameter
+						await WorkspaceManager.openDirectoriesInNewWindow(itemsToProcess, forceNewWindow);
 					}
 				} catch (error) {
 					const actionText =
