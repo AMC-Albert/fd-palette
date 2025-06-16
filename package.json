@@ -4,7 +4,7 @@
   "publisher": "fd-palette-dev",
   "displayName": "fd Palette",
   "description": "System-wide directory search using fd with workspace integration.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/AMC-Albert/fd-palette"
