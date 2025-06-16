@@ -24,4 +24,42 @@ export class ConfigurationManager {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return config.get<boolean>('enableCache') ?? true;
 	}
+
+	static async resetSettingsToDefault(): Promise<void> {
+		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+		
+		// Show confirmation dialog
+		const choice = await vscode.window.showWarningMessage(
+			'Are you sure you want to reset all fd-palette settings to their default values?',
+			{ modal: true },
+			'Reset Settings',
+			'Cancel'
+		);
+
+		if (choice !== 'Reset Settings') {
+			return;
+		}
+
+		// Reset all settings to undefined (which restores defaults)
+		const settingsToReset = [
+			'searchPath',
+			'maxDepth',
+			'excludePatterns',
+			'fdPath',
+			'enableCache',
+			'cacheDurationMinutes'
+		];
+
+		try {
+			await Promise.all(
+				settingsToReset.map(setting => 
+					config.update(setting, undefined, vscode.ConfigurationTarget.Global)
+				)
+			);
+
+			vscode.window.showInformationMessage('fd-palette settings have been reset to default values.');
+		} catch (error) {
+			vscode.window.showErrorMessage(`Failed to reset settings: ${error}`);
+		}
+	}
 }

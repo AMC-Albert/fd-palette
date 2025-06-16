@@ -22,12 +22,15 @@ export function activate(context: vscode.ExtensionContext) {
 	const checkFdCommand = vscode.commands.registerCommand('fd-palette.checkFdInstallation', async () => {
 		await searchOrchestrator.checkFdInstallation();
 	});
-
 	const clearCacheCommand = vscode.commands.registerCommand('fd-palette.clearCache', async () => {
 		cacheManager.clearCache();
 	});
 
-	context.subscriptions.push(searchCommand, checkFdCommand, clearCacheCommand);
+	const resetSettingsCommand = vscode.commands.registerCommand('fd-palette.resetSettings', async () => {
+		await ConfigurationManager.resetSettingsToDefault();
+	});
+
+	context.subscriptions.push(searchCommand, checkFdCommand, clearCacheCommand, resetSettingsCommand);
 }
 
 export function deactivate() {

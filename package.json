@@ -1,12 +1,13 @@
 {
   "name": "fd-palette",
+  "author": "Albert O'Shea",
   "displayName": "fd Palette",
   "description": "System-wide directory search using fd with workspace integration.",
   "version": "0.1.1",
   "publisher": "fd-palette-dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/fd-palette"
+    "url": "https://github.com/AMC-Albert/fd-palette"
   },
   "engines": {
     "vscode": "^1.90.0"
@@ -38,6 +39,11 @@
       {
         "command": "fd-palette.clearCache",
         "title": "Clear Search Cache",
+        "category": "fd Palette"
+      },
+      {
+        "command": "fd-palette.resetSettings",
+        "title": "Reset Settings to Default",
         "category": "fd Palette"
       }
     ],
@@ -74,7 +80,34 @@
             "build",
             "dist",
             ".next",
-            ".nuxt"
+            ".nuxt",
+            "**/lib",
+            "**/site-packages",
+            "**/__pycache__",
+            "__MACOSX",
+            ".DS_Store",
+            "Thumbs.db",
+            ".venv",
+            ".env",
+            "venv",
+            "env",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".tox",
+            "coverage",
+            ".coverage",
+            ".nyc_output",
+            "logs",
+            "*.log",
+            "tmp",
+            "temp",
+            ".tmp",
+            ".temp",
+            "cache",
+            ".cache",
+            "*.swp",
+            "*.swo",
+            "*~"
           ],
           "description": "Patterns to exclude from search"
         },
