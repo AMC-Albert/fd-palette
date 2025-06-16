@@ -27,8 +27,13 @@
   "contributes": {
     "commands": [
       {
-        "command": "fd-palette.searchDirectories",
-        "title": "Search Directories with fd",
+        "command": "fd-palette.addToWorkspace",
+        "title": "Add Directories to Workspace",
+        "category": "fd Palette"
+      },
+      {
+        "command": "fd-palette.openInWindow",
+        "title": "Open Directory in Window",
         "category": "fd Palette"
       },
       {
@@ -49,9 +54,14 @@
     ],
     "keybindings": [
       {
-        "command": "fd-palette.searchDirectories",
+        "command": "fd-palette.addToWorkspace",
         "key": "ctrl+alt+d",
         "mac": "cmd+alt+d"
+      },
+      {
+        "command": "fd-palette.openInWindow",
+        "key": "ctrl+alt+shift+d",
+        "mac": "cmd+alt+shift+d"
       }
     ],
     "configuration": {
@@ -125,6 +135,11 @@
           "type": "number",
           "default": 5,
           "description": "How long to cache search results (in minutes)"
+        },
+        "fdPalette.openInNewWindow": {
+          "type": "boolean",
+          "default": true,
+          "description": "When opening directories in window, open in new window instead of current window"
         }
       }
     }

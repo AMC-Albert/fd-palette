@@ -16,3 +16,8 @@ export interface SearchParams {	searchPath: string;
 	excludePatterns: string[];
 	fdPath: string;
 }
+
+export enum DirectoryAction {
+	AddToWorkspace = 'addToWorkspace',
+	OpenInWindow = 'openInWindow'
+}

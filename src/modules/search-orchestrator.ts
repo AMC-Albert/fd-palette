@@ -3,15 +3,24 @@ import { CacheManager } from './cache';
 import { DirectorySearcher } from './directory-search';
 import { DirectoryPicker } from './ui';
 import { ConfigurationManager } from './configuration';
+import { DirectoryAction } from './types';
 
 export class SearchOrchestrator {
 	constructor(private cacheManager: CacheManager) {}
-
 	async searchAndAddDirectories(): Promise<void> {
-		const searchParams = ConfigurationManager.getSearchParams();		// Check cache first
+		await this.performDirectorySearch(DirectoryAction.AddToWorkspace);
+	}
+	async searchAndOpenInWindow(): Promise<void> {
+		await this.performDirectorySearch(DirectoryAction.OpenInWindow);
+	}
+
+	private async performDirectorySearch(action: DirectoryAction): Promise<void> {
+		const searchParams = ConfigurationManager.getSearchParams();
+		
+		// Check cache first
 		const cachedDirectories = this.cacheManager.getCachedDirectories(searchParams);
 		if (cachedDirectories) {
-			await DirectoryPicker.showDirectoryPicker(cachedDirectories);
+			await DirectoryPicker.showDirectoryPicker(cachedDirectories, action);
 			return;
 		}
 
@@ -22,11 +31,11 @@ export class SearchOrchestrator {
 			vscode.window.showErrorMessage(`fd is not available: ${error}`);
 			return;
 		}
-
 		// Show a progress indicator while searching
+		const actionText = action === DirectoryAction.AddToWorkspace ? 'adding to workspace' : 'opening in window';
 		await vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
-			title: "Searching directories with fd...",
+			title: `Searching directories with fd for ${actionText}...`,
 			cancellable: true
 		}, async (progress, token) => {
 			
@@ -41,7 +50,7 @@ export class SearchOrchestrator {
 				// Cache the results
 				await this.cacheManager.setCachedDirectories(searchParams, directories);
 
-				await DirectoryPicker.showDirectoryPicker(directories);
+				await DirectoryPicker.showDirectoryPicker(directories, action);
 
 			} catch (error) {
 				vscode.window.showErrorMessage(`Error searching directories: ${error}`);

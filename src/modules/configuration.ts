@@ -19,10 +19,14 @@ export class ConfigurationManager {
 		const minutes = config.get<number>('cacheDurationMinutes') || 5;
 		return minutes * 60 * 1000; // Convert to milliseconds
 	}
-
 	static isCacheEnabled(): boolean {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return config.get<boolean>('enableCache') ?? true;
+	}
+
+	static shouldOpenInNewWindow(): boolean {
+		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+		return config.get<boolean>('openInNewWindow') ?? true;
 	}
 
 	static async resetSettingsToDefault(): Promise<void> {
@@ -39,7 +43,6 @@ export class ConfigurationManager {
 		if (choice !== 'Reset Settings') {
 			return;
 		}
-
 		// Reset all settings to undefined (which restores defaults)
 		const settingsToReset = [
 			'searchPath',
@@ -47,7 +50,8 @@ export class ConfigurationManager {
 			'excludePatterns',
 			'fdPath',
 			'enableCache',
-			'cacheDurationMinutes'
+			'cacheDurationMinutes',
+			'openInNewWindow'
 		];
 
 		try {

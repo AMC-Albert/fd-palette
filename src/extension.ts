@@ -13,10 +13,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Start cache preloading in background
 	cacheManager.preloadCacheInBackground();
-
 	// Register commands
-	const searchCommand = vscode.commands.registerCommand('fd-palette.searchDirectories', async () => {
+	const addToWorkspaceCommand = vscode.commands.registerCommand('fd-palette.addToWorkspace', async () => {
 		await searchOrchestrator.searchAndAddDirectories();
+	});
+	const openInWindowCommand = vscode.commands.registerCommand('fd-palette.openInWindow', async () => {
+		await searchOrchestrator.searchAndOpenInWindow();
 	});
 
 	const checkFdCommand = vscode.commands.registerCommand('fd-palette.checkFdInstallation', async () => {
@@ -30,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
 		await ConfigurationManager.resetSettingsToDefault();
 	});
 
-	context.subscriptions.push(searchCommand, checkFdCommand, clearCacheCommand, resetSettingsCommand);
+	context.subscriptions.push(addToWorkspaceCommand, openInWindowCommand, checkFdCommand, clearCacheCommand, resetSettingsCommand);
 }
 
 export function deactivate() {
