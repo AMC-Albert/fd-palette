@@ -65,6 +65,6 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 ## Performance Notes
 
 - Large datasets (>5000 directories) automatically fallback to basic sorting.
-- fzf is called in automatically when the amount of results shrinks.
+- fzf is called in automatically when the amount of results shrink.
 - Background cache refresh maintains responsiveness for subsequent searches.
 - Memory and file-based caching optimize repeated searches.
