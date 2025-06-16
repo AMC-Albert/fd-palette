@@ -8,7 +8,7 @@ export class DirectoryPicker {
 		quickPick.items = directories;
 		quickPick.canSelectMany = true;
 		quickPick.matchOnDescription = true;
-				// Set up dynamic placeholder
+		// Set up dynamic placeholder
 		const updatePlaceholder = () => {
 			const searchTerm = quickPick.value.trim();
 			if (searchTerm === '') {
