@@ -4,7 +4,7 @@
 	"publisher": "rip-add-dev",
 	"displayName": "Rip Add",
 	"description": "Quick directory search and workspace management using ripgrep and fzf",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/AMC-Albert/rip-add"
