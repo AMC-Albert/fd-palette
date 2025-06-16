@@ -3,7 +3,7 @@
   "author": "Albert O'Shea",
   "displayName": "fd Palette",
   "description": "System-wide directory search using fd with workspace integration.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "fd-palette-dev",
   "repository": {
     "type": "git",
