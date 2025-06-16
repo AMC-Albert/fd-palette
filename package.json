@@ -1,10 +1,10 @@
 {
   "name": "fd-palette",
   "author": "Albert O'Shea",
+  "publisher": "fd-palette-dev",
   "displayName": "fd Palette",
   "description": "System-wide directory search using fd with workspace integration.",
   "version": "0.2.0",
-  "publisher": "fd-palette-dev",
   "repository": {
     "type": "git",
     "url": "https://github.com/AMC-Albert/fd-palette"
@@ -33,7 +33,7 @@
       },
       {
         "command": "fd-palette.openInWindow",
-        "title": "Open Directory in Window",
+        "title": "Open Directory in New Window",
         "category": "fd Palette"
       },
       {
@@ -44,6 +44,11 @@
       {
         "command": "fd-palette.clearCache",
         "title": "Clear Search Cache",
+        "category": "fd Palette"
+      },
+      {
+        "command": "fd-palette.showCacheStatus",
+        "title": "Show Cache Status",
         "category": "fd Palette"
       },
       {
@@ -96,7 +101,6 @@
             "**/__pycache__",
             "__MACOSX",
             ".DS_Store",
-            "Thumbs.db",
             ".venv",
             ".env",
             "venv",
@@ -117,7 +121,38 @@
             ".cache",
             "*.swp",
             "*.swo",
-            "*~"
+            "*~",
+            "AppData",
+            "Application Data",
+            "System Volume Information",
+            "Recovery",
+            "$Recycle.Bin",
+            "$RECYCLE.BIN",
+            "ProgramData",
+            "Program Files",
+            "Program Files (x86)",
+            "Windows",
+            ".android",
+            ".aws",
+            ".azure",
+            ".docker",
+            ".npm",
+            ".nvm",
+            ".gradle",
+            ".m2",
+            ".maven",
+            ".cargo",
+            ".rustup",
+            ".go",
+            ".dotnet",
+            ".nuget",
+            ".yarn",
+            ".pnpm-store",
+            ".local/share",
+            ".config",
+            ".ssh",
+            ".gnupg",
+            ".gpg"
           ],
           "description": "Patterns to exclude from search"
         },
@@ -136,10 +171,20 @@
           "default": 5,
           "description": "How long to cache search results (in minutes)"
         },
-        "fdPalette.openInNewWindow": {
+        "fdPalette.openInWindow": {
           "type": "boolean",
           "default": true,
-          "description": "When opening directories in window, open in new window instead of current window"
+          "description": "When opening directories, open in new window instead of current window"
+        },
+        "fdPalette.excludeHomeDotFolders": {
+          "type": "boolean",
+          "default": true,
+          "description": "Exclude dot folders (like .ssh, .config, etc.) from the user's home directory root"
+        },
+        "fdPalette.uiDisplayLimit": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum number of directories to display initially in the picker (0 = no limit)"
         }
       }
     }

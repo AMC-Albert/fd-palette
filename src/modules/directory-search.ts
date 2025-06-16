@@ -1,10 +1,55 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import * as path from 'path';
+import * as os from 'os';
 import { DirectoryItem, SearchParams } from './types';
+import { ConfigurationManager } from './configuration';
 
 export class DirectorySearcher {
+	private static readonly FD_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+	private static _extensionContext: vscode.ExtensionContext | undefined;
+
+	static setExtensionContext(context: vscode.ExtensionContext): void {
+		this._extensionContext = context;
+	}
 	static async checkFdAvailability(fdPath: string): Promise<void> {
+		console.log(`fd-palette: checkFdAvailability called with fdPath: ${fdPath}`);
+		console.log(`fd-palette: Extension context available: ${!!this._extensionContext}`);
+		
+		if (!this._extensionContext) {
+			// Fallback if context not set - just run the check
+			console.log('fd-palette: No extension context, running uncached check');
+			return this._runFdAvailabilityCheck(fdPath);
+		}
+
+		// Check persistent cache first
+		const cacheKey = `fd-availability-${fdPath}`;
+		console.log(`fd-palette: Checking cache for key: ${cacheKey}`);
+		const cached = this._extensionContext.globalState.get<{ available: boolean; timestamp: number }>(cacheKey);
+		const now = Date.now();
+		
+		console.log(`fd-palette: Cached entry:`, cached);
+		if (cached && (now - cached.timestamp) < this.FD_CACHE_DURATION) {
+			console.log(`fd-palette: fd availability check cached (${cached.available ? 'available' : 'unavailable'})`);
+			if (cached.available) {
+				return Promise.resolve();
+			} else {
+				return Promise.reject(new Error('fd command failed (cached result)'));
+			}
+		}
+
+		// Not cached or expired, check availability
+		try {
+			await this._runFdAvailabilityCheck(fdPath);
+			// Cache the success
+			await this._extensionContext.globalState.update(cacheKey, { available: true, timestamp: now });
+		} catch (error) {
+			// Cache the failure
+			await this._extensionContext.globalState.update(cacheKey, { available: false, timestamp: now });
+			throw error;
+		}
+	}
+	private static async _runFdAvailabilityCheck(fdPath: string): Promise<void> {
 		return new Promise((resolve, reject) => {
 			const child = spawn(fdPath, ['--version'], {
 				stdio: ['ignore', 'pipe', 'pipe']
@@ -115,21 +160,37 @@ export class DirectorySearcher {
 					return;
 				}
 
-				const directories = stdout
+				const processingStartTime = Date.now();
+				
+				// Step 1: Split and filter lines
+				const splitStartTime = Date.now();
+				const rawLines = stdout
 					.trim()
 					.split('\n')
-					.filter(line => line.trim() !== '')
-					.map(fullPath => {
-						const dirName = path.basename(fullPath);
-						const parentDir = path.dirname(fullPath);
-						
-						return {
-							label: dirName,
-							description: parentDir,
-							fullPath: fullPath
-						} as DirectoryItem;
-					})
-					.sort((a, b) => a.label.localeCompare(b.label));
+					.filter(line => line.trim() !== '');
+				console.log(`fd-palette: Line splitting took ${Date.now() - splitStartTime}ms for ${rawLines.length} lines`);
+
+				// Step 2: Map to DirectoryItem objects
+				const mappingStartTime = Date.now();
+				const mappedDirectories = rawLines.map(fullPath => {
+					const dirName = path.basename(fullPath);
+					const parentDir = path.dirname(fullPath);
+					
+					return {
+						label: dirName,
+						description: parentDir,
+						fullPath: fullPath
+					} as DirectoryItem;
+				});
+				console.log(`fd-palette: Directory mapping took ${Date.now() - mappingStartTime}ms`);
+
+				// Step 3: Sort directories
+				const sortStartTime = Date.now();
+				const directories = mappedDirectories.sort((a, b) => a.label.localeCompare(b.label));
+				console.log(`fd-palette: Directory sorting took ${Date.now() - sortStartTime}ms`);
+
+				const totalProcessingTime = Date.now() - processingStartTime;
+				console.log(`fd-palette: Total directory processing took ${totalProcessingTime}ms`);
 
 				resolve(directories);
 			});
@@ -142,6 +203,5 @@ export class DirectorySearcher {
 			token.onCancellationRequested(() => {
 				child.kill();
 			});
-		});
-	}
+		});	}
 }

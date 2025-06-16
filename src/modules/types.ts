@@ -19,5 +19,5 @@ export interface SearchParams {	searchPath: string;
 
 export enum DirectoryAction {
 	AddToWorkspace = 'addToWorkspace',
-	OpenInWindow = 'openInWindow'
+	openInWindow = 'openInWindow'
 }

@@ -36,23 +36,23 @@ export class WorkspaceManager {
 		}
 	}
 
-	static async openDirectoriesInWindow(directories: DirectoryItem[]): Promise<void> {
-		const openInNewWindow = ConfigurationManager.shouldOpenInNewWindow();
+	static async openDirectoriesInNewWindow(directories: DirectoryItem[]): Promise<void> {
+		const openInWindow = ConfigurationManager.shouldopenInWindow();
 
 		if (directories.length === 1) {
 			// Single directory - open it directly
 			const directory = directories[0];
-			await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(directory.fullPath), openInNewWindow);
+			await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(directory.fullPath), openInWindow);
 			
-			const action = openInNewWindow ? 'new window' : 'current window';
+			const action = openInWindow ? 'new window' : 'current window';
 			vscode.window.showInformationMessage(`Opened ${path.basename(directory.fullPath)} in ${action}`);
 		} else {
 			// Multiple directories - create a workspace file or ask user what to do
-			await this.handleMultipleDirectories(directories, openInNewWindow);
+			await this.handleMultipleDirectories(directories, openInWindow);
 		}
 	}
 
-	private static async handleMultipleDirectories(directories: DirectoryItem[], openInNewWindow: boolean): Promise<void> {
+	private static async handleMultipleDirectories(directories: DirectoryItem[], openInWindow: boolean): Promise<void> {
 		const options = [
 			'Open each in separate window',
 			'Create workspace with all folders'
@@ -77,13 +77,13 @@ export class WorkspaceManager {
 			const folders = directories.map(dir => ({ uri: vscode.Uri.file(dir.fullPath) }));
 			await vscode.workspace.updateWorkspaceFolders(0, 0, ...folders);
 			
-			if (openInNewWindow) {
-				// Save current workspace and open in new window
+			if (openInWindow) {
+				// Save current workspace and open in window
 				await vscode.commands.executeCommand('workbench.action.files.saveWorkspaceAs');
 			}
 			
 			const folderNames = directories.map(dir => path.basename(dir.fullPath)).join(', ');
-			const action = openInNewWindow ? 'new window' : 'current window';
+			const action = openInWindow ? 'new window' : 'current window';
 			vscode.window.showInformationMessage(`Created workspace with ${directories.length} folders in ${action}: ${folderNames}`);
 		}
 	}

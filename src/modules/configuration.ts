@@ -19,14 +19,22 @@ export class ConfigurationManager {
 		const minutes = config.get<number>('cacheDurationMinutes') || 5;
 		return minutes * 60 * 1000; // Convert to milliseconds
 	}
+
 	static isCacheEnabled(): boolean {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return config.get<boolean>('enableCache') ?? true;
 	}
-
-	static shouldOpenInNewWindow(): boolean {
+	static shouldopenInWindow(): boolean {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-		return config.get<boolean>('openInNewWindow') ?? true;
+		return config.get<boolean>('openInWindow') ?? true;
+	}
+	static shouldExcludeHomeDotFolders(): boolean {
+		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+		return config.get<boolean>('excludeHomeDotFolders') ?? true;
+	}
+	static getUiDisplayLimit(): number {
+		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+		return config.get<number>('uiDisplayLimit') ?? 100;
 	}
 
 	static async resetSettingsToDefault(): Promise<void> {
@@ -47,11 +55,12 @@ export class ConfigurationManager {
 		const settingsToReset = [
 			'searchPath',
 			'maxDepth',
-			'excludePatterns',
-			'fdPath',
+			'excludePatterns',			'fdPath',
 			'enableCache',
 			'cacheDurationMinutes',
-			'openInNewWindow'
+			'openInWindow',
+			'excludeHomeDotFolders',
+			'uiDisplayLimit'
 		];
 
 		try {
