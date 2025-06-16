@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 export interface DirectoryItem extends vscode.QuickPickItem {
 	fullPath: string;
@@ -11,16 +11,16 @@ export interface CacheEntry {
 	version: number;
 }
 
-export interface SearchParams {	searchPath: string;
+export interface SearchParams {
+	searchPath: string[];
 	maxDepth: number;
 	excludePatterns: string[];
-	fdPath: string;
 	fzfPath: string;
 	enableFzf: boolean;
 	fzfOptions: string;
 }
 
 export enum DirectoryAction {
-	AddToWorkspace = 'addToWorkspace',
-	openInWindow = 'openInWindow'
+	AddToWorkspace = "addToWorkspace",
+	OpenInWindow = "openInWindow",
 }

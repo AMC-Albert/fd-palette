@@ -1,120 +1,124 @@
-import * as vscode from 'vscode';
-import { CacheManager } from './cache';
-import { DirectorySearcher } from './directory-search';
-import { DirectoryPicker } from './ui';
-import { ConfigurationManager } from './configuration';
-import { DirectoryAction } from './types';
+import * as vscode from "vscode";
+import { CacheManager } from "./cache";
+import { DirectorySearcher } from "./directory-search";
+import { DirectoryPicker } from "./ui";
+import { ConfigurationManager } from "./configuration";
+import { DirectoryAction, DirectoryItem } from "./types";
 
 export class SearchOrchestrator {
 	constructor(private cacheManager: CacheManager) {}
+
 	async searchAndAddDirectories(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.AddToWorkspace);
 	}
 
-	async searchAndopenInWindow(): Promise<void> {
-		await this.performDirectorySearch(DirectoryAction.openInWindow);
+	async searchAndOpenInWindow(): Promise<void> {
+		await this.performDirectorySearch(DirectoryAction.OpenInWindow);
 	}
+
 	private async performDirectorySearch(action: DirectoryAction): Promise<void> {
-		const startTime = Date.now();
 		const searchParams = ConfigurationManager.getSearchParams();
-		
-		// Check cache first
-		const cacheStartTime = Date.now();
-		const cachedDirectories = this.cacheManager.getCachedDirectories(searchParams);
-		const cacheTime = Date.now() - cacheStartTime;
 
+		// Check cache first with background refresh capability
+		const cachedDirectories = this.cacheManager.getCachedDirectoriesWithRefresh(
+			searchParams,
+			true
+		);
 		if (cachedDirectories) {
-			console.log(`fd-palette: Cache hit - found ${cachedDirectories.length} directories in ${cacheTime}ms`);
-			const uiStartTime = Date.now();
-			console.log('fd-palette: About to call DirectoryPicker.showDirectoryPicker...');
+			console.log(
+				`fd-palette: Using cached results (${cachedDirectories.length} directories) - background refresh may be triggered`
+			);
 			await DirectoryPicker.showDirectoryPicker(cachedDirectories, action);
-			const uiTime = Date.now() - uiStartTime;
-			const totalTime = Date.now() - startTime;
-			console.log(`fd-palette: UI display took ${uiTime}ms, total time ${totalTime}ms`);
 			return;
 		}
 
-		console.log(`fd-palette: Cache miss - took ${cacheTime}ms to check`);
-		// First check if fd is available
-		const fdCheckStartTime = Date.now();
+		console.log("fd-palette: No cached results found, performing fresh search");
+
+		// Check if ripgrep is available
+		let rgPath: string;
 		try {
-			await DirectorySearcher.checkFdAvailability(searchParams.fdPath);
+			rgPath = await DirectorySearcher.checkRipgrepAvailability();
+			console.log(`fd-palette: Using ripgrep at: ${rgPath}`);
 		} catch (error) {
-			vscode.window.showErrorMessage(`fd is not available: ${error}`);
+			vscode.window.showErrorMessage(`ripgrep is not available: ${error}`);
 			return;
 		}
-		const fdCheckTime = Date.now() - fdCheckStartTime;
-		console.log(`fd-palette: fd availability check took ${fdCheckTime}ms`);
 
 		// Check if fzf is available and enabled
 		let useFzf = false;
 		if (searchParams.enableFzf) {
-			const fzfCheckStartTime = Date.now();
 			try {
 				await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
 				useFzf = true;
-				console.log(`fd-palette: fzf is available and will be used`);
+				console.log(
+					"fd-palette: fzf is available, will use enhanced ripgrep + fzf search"
+				);
 			} catch (error) {
-				console.log(`fd-palette: fzf is not available, falling back to fd only: ${error}`);
+				console.log(
+					"fd-palette: fzf not available, using basic ripgrep search"
+				);
 				useFzf = false;
 			}
-			const fzfCheckTime = Date.now() - fzfCheckStartTime;
-			console.log(`fd-palette: fzf availability check took ${fzfCheckTime}ms`);
-		}		// Show a progress indicator while searching
-		const actionText = action === DirectoryAction.AddToWorkspace ? 'adding to workspace' : 'opening';
-		const searchMethod = useFzf ? 'fd + fzf' : 'fd';
-		const progressStartTime = Date.now();
-		await vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
-			title: `Searching directories with ${searchMethod} for ${actionText}...`,
-			cancellable: true		}, async (progress, token) => {
-			const progressSetupTime = Date.now() - progressStartTime;
-			console.log(`fd-palette: Progress notification setup took ${progressSetupTime}ms`);
-			
-			try {
-				const searchStartTime = Date.now();
-				
-				// Use fzf if available, otherwise fall back to fd only
-				const directories = useFzf 
-					? await DirectorySearcher.findDirectoriesWithFzf(searchParams, token)
-					: await DirectorySearcher.findDirectories(searchParams, token);
-				
-				const searchTime = Date.now() - searchStartTime;
-				
-				if (directories.length === 0) {
-					const noResultsMessage = useFzf 
-						? 'No directories selected from fzf search.' 
-						: 'No directories found.';
-					vscode.window.showInformationMessage(noResultsMessage);
-					return;
-				}				console.log(`fd-palette: ${searchMethod} search found ${directories.length} directories in ${searchTime}ms`);
+		}
 
-				// Cache the results (using the same cache key since both methods return compatible results)
-				const cacheStartTime = Date.now();
-				await this.cacheManager.setCachedDirectories(searchParams, directories);
-				const cacheTime = Date.now() - cacheStartTime;
-				console.log(`fd-palette: Caching took ${cacheTime}ms`);
+		// Show a progress indicator while searching
+		const actionText =
+			action === DirectoryAction.AddToWorkspace
+				? "adding to workspace"
+				: "opening";
+		const searchMethodName = useFzf ? "ripgrep + fzf" : "ripgrep";
+		await vscode.window.withProgress(
+			{
+				location: vscode.ProgressLocation.Notification,
+				title: `Searching directories with ${searchMethodName} for ${actionText}...`,
+				cancellable: true,
+			},
+			async (progress, token) => {
+				try {
+					// Use ripgrep with or without fzf
+					const directories = useFzf
+						? await DirectorySearcher.findDirectoriesWithFzf(
+								searchParams,
+								token
+						  )
+						: await DirectorySearcher.findDirectories(searchParams, token);
 
-				const uiStartTime = Date.now();
-				await DirectoryPicker.showDirectoryPicker(directories, action);
-				const uiTime = Date.now() - uiStartTime;
-				const totalTime = Date.now() - startTime;
-				console.log(`fd-palette: UI display took ${uiTime}ms, total time ${totalTime}ms`);
+					if (directories.length === 0) {
+						const noResultsMessage = `No directories found using ${searchMethodName}.`;
+						vscode.window.showInformationMessage(noResultsMessage);
+						return;
+					}
 
-			} catch (error) {
-				vscode.window.showErrorMessage(`Error searching directories: ${error}`);
+					// Cache the results
+					await this.cacheManager.setCachedDirectories(
+						searchParams,
+						directories
+					);
+
+					// Show the directory picker
+					await DirectoryPicker.showDirectoryPicker(directories, action);
+				} catch (error) {
+					if (error instanceof Error && error.message.includes("cancelled")) {
+						// User cancelled the operation
+						return;
+					}
+					console.error("Error during directory search:", error);
+					vscode.window.showErrorMessage(`Search failed: ${error}`);
+				}
 			}
-		});
-	}
-
-	async checkFdInstallation(): Promise<void> {
-		const searchParams = ConfigurationManager.getSearchParams();
-		await DirectorySearcher.checkFdInstallation(searchParams.fdPath);
+		);
 	}
 
 	async checkFzfInstallation(): Promise<void> {
 		const searchParams = ConfigurationManager.getSearchParams();
-		await DirectorySearcher.checkFzfInstallation(searchParams.fzfPath);
+		try {
+			await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
+			vscode.window.showInformationMessage(
+				`fzf is installed and working correctly at: ${searchParams.fzfPath}`
+			);
+		} catch (error) {
+			vscode.window.showErrorMessage(`fzf is not available: ${error}`);
+		}
 	}
 
 	clearCache(): void {

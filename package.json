@@ -1,236 +1,226 @@
 {
-  "name": "fd-palette",
-  "author": "Albert O'Shea",
-  "publisher": "fd-palette-dev",
-  "displayName": "fd Palette",
-  "description": "System-wide directory search using fd with workspace integration.",
-  "version": "0.4.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/AMC-Albert/fd-palette"
-  },
-  "engines": {
-    "vscode": "^1.90.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "keywords": [
-    "fd",
-    "search",
-    "directories",
-    "workspace",
-    "file-explorer"
-  ],
-  "activationEvents": [],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "fd-palette.addToWorkspace",
-        "title": "Add Directories to Workspace",
-        "category": "fd Palette"
-      },
-      {
-        "command": "fd-palette.openInWindow",
-        "title": "Open Directory in New Window",
-        "category": "fd Palette"
-      },
-      {
-        "command": "fd-palette.checkFdInstallation",
-        "title": "Check fd Installation",
-        "category": "fd Palette"
-      },
-      {
-        "command": "fd-palette.checkFzfInstallation",
-        "title": "Check fzf Installation",
-        "category": "fd Palette"
-      },
-      {
-        "command": "fd-palette.clearCache",
-        "title": "Clear Search Cache",
-        "category": "fd Palette"
-      },
-      {
-        "command": "fd-palette.showCacheStatus",
-        "title": "Show Cache Status",
-        "category": "fd Palette"
-      },
-      {
-        "command": "fd-palette.resetSettings",
-        "title": "Reset Settings to Default",
-        "category": "fd Palette"
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "fd-palette.addToWorkspace",
-        "key": "ctrl+alt+d",
-        "mac": "cmd+alt+d"
-      },
-      {
-        "command": "fd-palette.openInWindow",
-        "key": "ctrl+alt+shift+d",
-        "mac": "cmd+alt+shift+d"
-      }
-    ],
-    "configuration": {
-      "title": "fd Palette",
-      "properties": {
-        "fdPalette.searchPath": {
-          "type": "string",
-          "default": "",
-          "description": "Default search path for fd (leave empty to search from root)"
-        },
-        "fdPalette.maxDepth": {
-          "type": "number",
-          "default": 5,
-          "description": "Maximum search depth for fd"
-        },
-        "fdPalette.excludePatterns": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "node_modules",
-            ".git",
-            ".vscode",
-            "target",
-            "build",
-            "dist",
-            ".next",
-            ".nuxt",
-            "**/lib",
-            "**/site-packages",
-            "**/__pycache__",
-            "__MACOSX",
-            ".DS_Store",
-            ".venv",
-            ".env",
-            "venv",
-            "env",
-            ".pytest_cache",
-            ".mypy_cache",
-            ".tox",
-            "coverage",
-            ".coverage",
-            ".nyc_output",
-            "logs",
-            "*.log",
-            "tmp",
-            "temp",
-            ".tmp",
-            ".temp",
-            "cache",
-            ".cache",
-            "*.swp",
-            "*.swo",
-            "*~",
-            "AppData",
-            "Application Data",
-            "System Volume Information",
-            "Recovery",
-            "$Recycle.Bin",
-            "$RECYCLE.BIN",
-            "ProgramData",
-            "Program Files",
-            "Program Files (x86)",
-            "Windows",
-            ".android",
-            ".aws",
-            ".azure",
-            ".docker",
-            ".npm",
-            ".nvm",
-            ".gradle",
-            ".m2",
-            ".maven",
-            ".cargo",
-            ".rustup",
-            ".go",
-            ".dotnet",
-            ".nuget",
-            ".yarn",
-            ".pnpm-store",
-            ".local/share",
-            ".config",
-            ".ssh",
-            ".gnupg",
-            ".gpg"
-          ],
-          "description": "Patterns to exclude from search"
-        },
-        "fdPalette.fdPath": {
-          "type": "string",
-          "default": "fd",
-          "description": "Path to fd executable (use 'fd' if in PATH)"
-        },
-        "fdPalette.fzfPath": {
-          "type": "string",
-          "default": "fzf",
-          "description": "Path to fzf executable (use 'fzf' if in PATH)"
-        },
-        "fdPalette.enableFzf": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable fzf integration for improved fuzzy matching when available"
-        },
-        "fdPalette.fzfOptions": {
-          "type": "string",
-          "default": "--height=60% --layout=reverse --border --info=inline --cycle",
-          "description": "Additional options to pass to fzf for enhanced fuzzy matching"
-        },
-        "fdPalette.enableCache": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable caching of search results to improve performance"
-        },
-        "fdPalette.cacheDurationMinutes": {
-          "type": "number",
-          "default": 5,
-          "description": "How long to cache search results (in minutes)"
-        },
-        "fdPalette.openInWindow": {
-          "type": "boolean",
-          "default": true,
-          "description": "When opening directories, open in new window instead of current window"
-        },
-        "fdPalette.excludeHomeDotFolders": {
-          "type": "boolean",
-          "default": true,
-          "description": "Exclude dot folders (like .ssh, .config, etc.) from the user's home directory root"
-        },
-        "fdPalette.uiDisplayLimit": {
-          "type": "number",
-          "default": 100,
-          "description": "Maximum number of directories to display initially in the picker (0 = no limit)"
-        },
-        "fdPalette.enableDebugLogging": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable detailed debug logging for fzf integration and search operations"
-        }
-      }
-    }
-  },
-  "scripts": {
-    "vscode:prepublish": "pnpm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "pnpm run compile && pnpm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.90.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "@typescript-eslint/eslint-plugin": "^8.31.1",
-    "@typescript-eslint/parser": "^8.31.1",
-    "eslint": "^9.25.1",
-    "typescript": "^5.8.3",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.5.2"
-  }
+	"name": "fd-palette",
+	"author": "Albert O'Shea",
+	"publisher": "fd-palette-dev",
+	"displayName": "fd Palette",
+	"description": "System-wide directory search using fd with workspace integration.",
+	"version": "0.4.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/AMC-Albert/fd-palette"
+	},
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"fd",
+		"search",
+		"directories",
+		"workspace",
+		"file-explorer"
+	],
+	"main": "./out/extension.js",
+	"contributes": {		"commands": [
+			{
+				"command": "fd-palette.addToWorkspace",
+				"title": "Add Directories to Workspace",
+				"category": "fd Palette"
+			},
+			{
+				"command": "fd-palette.openInWindow",
+				"title": "Open Directory in New Window",
+				"category": "fd Palette"
+			},
+			{
+				"command": "fd-palette.clearCache",
+				"title": "Clear Search Cache",
+				"category": "fd Palette"
+			},
+			{
+				"command": "fd-palette.resetSettings",
+				"title": "Reset Settings to Default",
+				"category": "fd Palette"
+			},
+			{
+				"command": "fd-palette.checkFzfInstallation",
+				"title": "Check fzf Installation",
+				"category": "fd Palette"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "fd-palette.addToWorkspace",
+				"key": "ctrl+alt+d",
+				"mac": "cmd+alt+d"
+			},
+			{
+				"command": "fd-palette.openInWindow",
+				"key": "ctrl+alt+shift+d",
+				"mac": "cmd+alt+shift+d"
+			}
+		],
+		"configuration": {
+			"title": "fd Palette",
+			"properties": {
+				"fdPalette.searchPath": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "List of search paths for fd - first valid directory wins (leave empty to search from root)"
+				},
+				"fdPalette.maxDepth": {
+					"type": "number",
+					"default": 10,
+					"description": "Maximum search depth for fd"
+				},
+				"fdPalette.excludePatterns": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [
+						"node_modules",
+						"packages",
+						".git",
+						"lfs",
+						".svn",
+						".vscode",
+						"target",
+						"build",
+						"dist",
+						".next",
+						".nuxt",
+						"lib",
+						"site-packages",
+						"__pycache__",
+						"__MACOSX",
+						".DS_Store",
+						".venv",
+						".env",
+						"venv",
+						"env",
+						".pytest_cache",
+						"miniconda3",
+						"miniconda",
+						".mypy_cache",
+						".tox",
+						"coverage",
+						".coverage",
+						".nyc_output",
+						"logs",
+						"*.log",
+						"tmp",
+						"temp",
+						".tmp",
+						".temp",
+						"cache",
+						".cache",
+						"*.swp",
+						"*.swo",
+						"AppData",
+						"Application Data",
+						"System Volume Information",
+						"Recovery",
+						"$Recycle.Bin",
+						"$RECYCLE.BIN",
+						"ProgramData",
+						"Program Files",
+						"Program Files (x86)",
+						"Windows",
+						".android",
+						".aws",
+						".azure",
+						".docker",
+						".npm",
+						".nvm",
+						".gradle",
+						".m2",
+						".maven",
+						".cargo",
+						".rustup",
+						".go",
+						".dotnet",
+						".nuget",
+						".yarn",
+						".pnpm-store",
+						".local/share",
+						".config",
+						".ssh",
+						".gnupg",
+						".gpg"					],
+					"description": "Patterns to exclude from search"
+				},
+				"fdPalette.fzfPath": {
+					"type": "string",
+					"default": "fzf",
+					"description": "Path to fzf executable (use 'fzf' if in PATH)"
+				},
+				"fdPalette.enableFzf": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable fzf integration for improved fuzzy matching when available"
+				},
+				"fdPalette.fzfOptions": {
+					"type": "string",
+					"default": "--height=60% --layout=reverse --border --info=inline --cycle",
+					"description": "Additional options to pass to fzf for enhanced fuzzy matching"
+				},
+				"fdPalette.enableCache": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable caching of search results to improve performance"
+				},"fdPalette.cacheDurationMinutes": {
+					"type": "number",
+					"default": 5,
+					"description": "How long to cache search results (in minutes)"
+				},
+				"fdPalette.enableBackgroundRefresh": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable background cache refresh for better performance (stale-while-revalidate pattern)"
+				},
+				"fdPalette.backgroundRefreshThreshold": {
+					"type": "number",
+					"default": 0.5,
+					"minimum": 0.1,
+					"maximum": 0.9,
+					"description": "When cache is older than this fraction of cache duration, trigger background refresh (0.5 = 50%)"
+				},
+				"fdPalette.openInWindow": {
+					"type": "boolean",
+					"default": true,
+					"description": "When opening directories, open in new window instead of current window"
+				},
+				"fdPalette.uiDisplayLimit": {
+					"type": "number",
+					"default": 100,
+					"description": "Maximum number of directories to display initially in the picker (0 = no limit)"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "pnpm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "pnpm run compile && pnpm run lint",
+		"lint": "eslint src",
+		"test": "vscode-test"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.90.0",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "20.x",
+		"@typescript-eslint/eslint-plugin": "^8.31.1",
+		"@typescript-eslint/parser": "^8.31.1",
+		"eslint": "^9.25.1",
+		"typescript": "^5.8.3",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.5.2"
+	}
 }
