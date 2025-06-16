@@ -180,11 +180,14 @@ export class CacheManager {	private memoryCache = new Map<string, CacheEntry>();
 		if (!ConfigurationManager.isCacheEnabled()) {
 			return null;
 		}
-
 		const cacheKey = this.getCacheKey(searchParams);
 		const cacheKeyHash = crypto.createHash('sha256').update(cacheKey).digest('hex').substring(0, 16);
-		console.log('fd-palette: Cache lookup key hash:', cacheKeyHash);
-		console.log('fd-palette: Memory cache has', this.memoryCache.size, 'entries');
+		
+		// Reduced cache debug logging - only when debug is enabled
+		if (ConfigurationManager.isDebugEnabled()) {
+			console.log('fd-palette: Cache lookup key hash:', cacheKeyHash);
+			console.log('fd-palette: Memory cache has', this.memoryCache.size, 'entries');
+		}
 		
 		// Debug: show all cache keys in memory
 		const memoryCacheKeys = Array.from(this.memoryCache.keys()).map(key => 

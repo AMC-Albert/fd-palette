@@ -49,6 +49,11 @@ export class ConfigurationManager {
 		return config.get<boolean>('enableFzf') ?? true;
 	}
 
+	static isDebugEnabled(): boolean {
+		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+		return config.get<boolean>('enableDebugLogging') ?? false;
+	}
+
 	static async resetSettingsToDefault(): Promise<void> {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		
@@ -62,17 +67,21 @@ export class ConfigurationManager {
 
 		if (choice !== 'Reset Settings') {
 			return;
-		}
-		// Reset all settings to undefined (which restores defaults)
+		}		// Reset all settings to undefined (which restores defaults)
 		const settingsToReset = [
 			'searchPath',
 			'maxDepth',
-			'excludePatterns',			'fdPath',
+			'excludePatterns',
+			'fdPath',
+			'fzfPath',
+			'enableFzf',
+			'fzfOptions',
 			'enableCache',
 			'cacheDurationMinutes',
 			'openInWindow',
 			'excludeHomeDotFolders',
-			'uiDisplayLimit'
+			'uiDisplayLimit',
+			'enableDebugLogging'
 		];
 
 		try {

@@ -9,9 +9,12 @@ import { DirectorySearcher } from './directory-search';
 export class DirectoryPicker {	private static async filterWithFzf(directories: DirectoryItem[], query: string, fzfPath: string): Promise<DirectoryItem[]> {
 		if (!query.trim()) {
 			return directories;
-		}		return new Promise((resolve) => {
+		}
+		
+		return new Promise((resolve) => {
 			// Prepare input for fzf: create enhanced searchable text optimized for fuzzy matching
-			const directoryMap = new Map<string, DirectoryItem>();			const input = directories.map((dir, index) => {
+			const directoryMap = new Map<string, DirectoryItem>();
+			const input = directories.map((dir, index) => {
 				const key = `${index}`;
 				directoryMap.set(key, dir);
 				
@@ -48,12 +51,11 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 			});
 
 			let output = '';
-			let hasError = false;
-
-			// Debug logging for fzf input/output
-			if (query.includes('blend') || query.includes('vault') || query.includes('obsidian')) {
+			let hasError = false;			// Debug logging for fzf input/output (reduced)
+			// Only log for very specific debugging scenarios
+			const isDebugEnabled = ConfigurationManager.isDebugEnabled();
+			if (isDebugEnabled) {
 				console.log(`fd-palette: fzf debug - query: "${query}"`);
-				console.log(`fd-palette: fzf debug - sample input lines:`, input.split('\n').slice(0, 5));
 			}
 
 			fzfChild.stdout?.on('data', (data) => {
@@ -65,7 +67,8 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 				hasError = true;
 			});
 
-			fzfChild.on('close', (code) => {				if (hasError || (code !== null && code !== 0)) {
+			fzfChild.on('close', (code) => {
+				if (hasError || (code !== null && code !== 0)) {
 					// Fall back to enhanced fuzzy-like filtering if fzf fails
 					console.log('fd-palette: fzf filter failed, falling back to enhanced fuzzy matching');
 					const queryLower = query.toLowerCase();
@@ -87,7 +90,8 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 						
 						// Enhanced fuzzy-like matching: check if all query parts can be found
 						// in any of the search texts (fuzzy matching simulation)
-						return queryParts.every(part =>							searchTexts.some(text => {
+						return queryParts.every(part =>
+							searchTexts.some(text => {
 								// Simple fuzzy matching: characters can be separated but must be in order
 								let textIndex = 0;
 								for (const char of part) {
@@ -108,7 +112,7 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 						const bName = path.basename(b.fullPath).toLowerCase();
 						const aNormalized = aName.replace(/[-_]/g, ' ');
 						const bNormalized = bName.replace(/[-_]/g, ' ');
-								// Prioritize exact matches to normalized names
+						// Prioritize exact matches to normalized names
 						const queryNormalized = queryLower.replace(/\s+/g, ' ');
 						if (aNormalized.includes(queryNormalized) && !bNormalized.includes(queryNormalized)) {
 							return -1;
@@ -118,18 +122,15 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 						}
 						
 						// Then by directory name length (shorter = more specific)
-						return aName.length - bName.length;					});
+						return aName.length - bName.length;
+					});
 					
 					resolve(fallbackFiltered);
 					return;
 				}// Parse fzf output and map back to DirectoryItem objects
 				const matchedLines = output.trim().split('\n').filter(line => line.trim() !== '');
 				const matchedDirectories: DirectoryItem[] = [];
-				
-				// Debug logging for fzf results
-				if (query.includes('blend') || query.includes('vault') || query.includes('obsidian')) {
-					console.log(`fd-palette: fzf debug - output lines:`, matchedLines.slice(0, 10));
-				}
+				const isDebugEnabled = ConfigurationManager.isDebugEnabled();
 				
 				matchedLines.forEach(line => {
 					const firstSpace = line.indexOf(' ');
@@ -138,16 +139,16 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 						const dir = directoryMap.get(key);
 						if (dir) {
 							matchedDirectories.push(dir);
-							// Log matching directories for debugging
-							if (query.includes('blend') || query.includes('vault') || query.includes('obsidian')) {
-								console.log(`fd-palette: fzf debug - matched: ${path.basename(dir.fullPath)} (${dir.fullPath})`);
-							}
 						}
-					}				});				// Post-process results to improve hierarchical ranking
+					}
+				});
+
+				// Post-process results to improve hierarchical ranking
 				// Boost children of well-matched directories
 				const enhancedResults = DirectoryPicker.enhanceHierarchicalRanking(matchedDirectories, query);
-				
-				console.log(`fd-palette: fzf filtered ${directories.length} to ${enhancedResults.length} directories for query "${query}"`);
+				if (enhancedResults.length < 20 || ConfigurationManager.isDebugEnabled()) {
+					console.log(`fd-palette: fzf filtered ${directories.length} to ${enhancedResults.length} directories for query "${query}"`);
+				}
 				resolve(enhancedResults);
 			});
 
@@ -163,7 +164,8 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 						item.fullPath
 					].join(' ').toLowerCase();
 							// Enhanced matching: all query parts must be found
-					return queryParts.every(part => searchText.includes(part));				});
+					return queryParts.every(part => searchText.includes(part));
+				});
 				
 				resolve(fallbackFiltered);
 			});
@@ -182,14 +184,18 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 		const isFzfEnabled = ConfigurationManager.isFzfEnabled();
 		const fzfPath = ConfigurationManager.getFzfPath();
 		let useFzfFiltering = false;
-		
+
 		if (isFzfEnabled) {
 			try {
 				await DirectorySearcher.checkFzfAvailability(fzfPath);
-				useFzfFiltering = true;
-				console.log('fd-palette: Using fzf for enhanced fuzzy matching');
+				useFzfFiltering = true;				// Reduced logging - only log when actually using fzf
+				if (ConfigurationManager.isDebugEnabled()) {
+					console.log('fd-palette: Using fzf for enhanced fuzzy matching');
+				}
 			} catch (error) {
-				console.log('fd-palette: fzf not available, using VS Code built-in matching');
+				if (ConfigurationManager.isDebugEnabled()) {
+					console.log('fd-palette: fzf not available, using VS Code built-in matching');
+				}
 			}
 		}
 		
@@ -246,7 +252,9 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 			// Clear any pending filter operation
 			if (filterTimeout) {
 				clearTimeout(filterTimeout);
-			}			if (useFzfFiltering) {
+			}
+			
+			if (useFzfFiltering) {
 				// Use fzf for superior fuzzy matching, disable VS Code's filtering
 				filterTimeout = setTimeout(async () => {
 					if (isFilteringInProgress) {
@@ -275,7 +283,9 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 							});
 							
 							quickPick.items = enhancedResults;
-							console.log(`fd-palette: fzf filtered ${directories.length} to ${enhancedResults.length} items in ${Date.now() - filterStartTime}ms`);
+							if (enhancedResults.length < 20 || ConfigurationManager.isDebugEnabled()) {
+								console.log(`fd-palette: fzf filtered ${directories.length} to ${enhancedResults.length} items in ${Date.now() - filterStartTime}ms`);
+							}
 						} else {
 							// Show all items when query is empty
 							quickPick.items = displayDirectories;
@@ -400,10 +410,8 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 		// Find well-matched parent directories
 		const parentMatches = scoredDirectories
 			.filter(item => item.isParentMatch)
-			.map(item => item.directory.fullPath);
-
-		// Debug logging for hierarchical ranking
-		if (query.includes('blend') || query.includes('vault') || query.includes('obsidian')) {
+			.map(item => item.directory.fullPath);		// Debug logging for hierarchical ranking (reduced)
+		if (ConfigurationManager.isDebugEnabled()) {
 			console.log(`fd-palette: hierarchical debug - parent matches:`, parentMatches.map(p => path.basename(p)));
 		}
 
@@ -416,12 +424,11 @@ export class DirectoryPicker {	private static async filterWithFzf(directories: D
 				return item.directory.fullPath.startsWith(parentPath + path.sep) &&
 					   item.directory.fullPath !== parentPath;
 			});
-					if (isChildOfMatch && boostedScore < 700) {
+			if (isChildOfMatch && boostedScore < 700) {
 				// Boost children of matched parents, but keep them below the parent
 				boostedScore = 750;
-				
-				// Debug logging for boosted children
-				if (query.includes('blend') || query.includes('vault') || query.includes('obsidian')) {
+						// Debug logging for boosted children (reduced)
+				if (ConfigurationManager.isDebugEnabled()) {
 					console.log(`fd-palette: hierarchical debug - boosted child: ${path.basename(item.directory.fullPath)} (score: ${boostedScore})`);
 				}
 			}

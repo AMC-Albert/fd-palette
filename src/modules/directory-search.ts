@@ -106,26 +106,34 @@ export class DirectorySearcher {
 			});
 		});
 	}
-
-	static async checkFzfAvailability(fzfPath: string): Promise<void> {
-		console.log(`fd-palette: checkFzfAvailability called with fzfPath: ${fzfPath}`);
-		console.log(`fd-palette: Extension context available: ${!!this._extensionContext}`);
-		
+	static async checkFzfAvailability(fzfPath: string): Promise<void> {		// Reduced logging - only in debug mode
+		if (ConfigurationManager.isDebugEnabled()) {
+			console.log(`fd-palette: checkFzfAvailability called with fzfPath: ${fzfPath}`);
+			console.log(`fd-palette: Extension context available: ${!!this._extensionContext}`);
+		}
 		if (!this._extensionContext) {
 			// Fallback if context not set - just run the check
-			console.log('fd-palette: No extension context, running uncached fzf check');
+			if (ConfigurationManager.isDebugEnabled()) {
+				console.log('fd-palette: No extension context, running uncached fzf check');
+			}
 			return this._runFzfAvailabilityCheck(fzfPath);
 		}
 
 		// Check persistent cache first
 		const cacheKey = `fzf-availability-${fzfPath}`;
-		console.log(`fd-palette: Checking cache for key: ${cacheKey}`);
+		if (ConfigurationManager.isDebugEnabled()) {
+			console.log(`fd-palette: Checking cache for key: ${cacheKey}`);
+		}
 		const cached = this._extensionContext.globalState.get<{ available: boolean; timestamp: number }>(cacheKey);
 		const now = Date.now();
 		
-		console.log(`fd-palette: Cached fzf entry:`, cached);
+		if (ConfigurationManager.isDebugEnabled()) {
+			console.log(`fd-palette: Cached fzf entry:`, cached);
+		}
 		if (cached && (now - cached.timestamp) < this.FD_CACHE_DURATION) {
-			console.log(`fd-palette: fzf availability check cached (${cached.available ? 'available' : 'unavailable'})`);
+			if (ConfigurationManager.isDebugEnabled()) {
+				console.log(`fd-palette: fzf availability check cached (${cached.available ? 'available' : 'unavailable'})`);
+			}
 			if (cached.available) {
 				return Promise.resolve();
 			} else {

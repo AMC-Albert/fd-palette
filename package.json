@@ -205,6 +205,11 @@
           "type": "number",
           "default": 100,
           "description": "Maximum number of directories to display initially in the picker (0 = no limit)"
+        },
+        "fdPalette.enableDebugLogging": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable detailed debug logging for fzf integration and search operations"
         }
       }
     }
