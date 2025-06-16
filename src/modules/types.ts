@@ -19,6 +19,9 @@ export interface SearchParams {
 	fzfPath: string;
 	enableFzf: boolean;
 	fzfOptions: string;
+	includeHidden: boolean;
+	respectGitignore: boolean;
+	additionalRipgrepArgs: string[];
 }
 
 export enum DirectoryAction {

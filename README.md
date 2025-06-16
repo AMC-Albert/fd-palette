@@ -53,6 +53,15 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 }
 ```
 
+### Advanced Ripgrep Configuration
+```json
+{
+    "ripOpen.includeHidden": true,      // Include hidden files/directories
+    "ripOpen.respectGitignore": false,  // Respect .gitignore and ignore files
+    "ripOpen.additionalRipgrepArgs": ["--follow", "--case-sensitive"]
+}
+```
+
 ## Commands
 
 | Command | Default Keybinding | Description |

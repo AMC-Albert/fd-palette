@@ -66,10 +66,23 @@ export class CacheManager {
 		const basePath = cacheDir || this.getCacheDir();
 		return path.join(basePath, `cache_${hash.substring(0, 16)}.json`);
 	}
-
 	private getCacheKey(searchParams: SearchParams): string {
-		const { searchPath, maxDepth, excludePatterns } = searchParams;
-		return JSON.stringify({ searchPath, maxDepth, excludePatterns });
+		const { 
+			searchPath, 
+			maxDepth, 
+			excludePatterns, 
+			includeHidden, 
+			respectGitignore, 
+			additionalRipgrepArgs 
+		} = searchParams;
+		return JSON.stringify({ 
+			searchPath, 
+			maxDepth, 
+			excludePatterns, 
+			includeHidden, 
+			respectGitignore, 
+			additionalRipgrepArgs 
+		});
 	}
 	cleanupOldCacheFiles(): void {
 		try {
@@ -493,6 +506,39 @@ export class CacheManager {
 
 		vscode.window.showInformationMessage(
 			`Cache cleared. Removed ${memoryCacheSize} entries.`
+		);
+	}
+	/**
+	 * Clear cache when ripgrep configuration changes
+	 */
+	clearCacheOnConfigChange(): void {
+		const memoryCacheSize = this.memoryCache.size;
+		this.memoryCache.clear();
+
+		// Clear VSCode globalState cache
+		this.extensionContext.globalState.keys().forEach((key) => {
+			if (key.startsWith("rip-open-cache-")) {
+				this.extensionContext.globalState.update(key, undefined);
+			}
+		});
+
+		// Clear file-based cache
+		try {
+			const cacheDir = this.getCacheDir();
+			if (fs.existsSync(cacheDir)) {
+				const files = fs.readdirSync(cacheDir);
+				files.forEach((file) => {
+					if (file.endsWith(".json")) {
+						fs.unlinkSync(path.join(cacheDir, file));
+					}
+				});
+			}
+		} catch (error) {
+			console.error("Error clearing file cache:", error);
+		}
+
+		console.log(
+			`rip-open: Cache cleared due to configuration change. Removed ${memoryCacheSize} entries.`
 		);
 	}
 

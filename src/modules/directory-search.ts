@@ -446,15 +446,23 @@ export class DirectorySearcher {
 
 			// Get all valid search paths
 			const searchPaths = await ConfigurationManager.getValidSearchPaths();
-
 			const baseArgs: string[] = [
 				"--files", // List files (we'll filter directories from the output)
 				"--null", // Use null separator for better parsing
-				"--hidden", // Include hidden files/directories
-				"--no-ignore", // Don't respect .gitignore initially (we'll filter ourselves)
 				"--max-depth",
 				searchParams.maxDepth.toString(),
 			];
+
+			// Add configurable options
+			if (searchParams.includeHidden) {
+				baseArgs.push("--hidden");
+			}
+			if (!searchParams.respectGitignore) {
+				baseArgs.push("--no-ignore");
+			}
+
+			// Add additional user-specified ripgrep arguments
+			baseArgs.push(...searchParams.additionalRipgrepArgs);
 
 			// Add exclude patterns using ripgrep's glob syntax
 			for (const pattern of searchParams.excludePatterns) {
@@ -467,9 +475,15 @@ export class DirectorySearcher {
 				}`
 			);
 			console.log(
-				`rip-open: Max depth: ${
-					searchParams.maxDepth
-				}, Exclude patterns: ${searchParams.excludePatterns.join(", ")}`
+				`rip-open: Max depth: ${searchParams.maxDepth}, Include hidden: ${searchParams.includeHidden}, Respect gitignore: ${searchParams.respectGitignore}`
+			);
+			console.log(
+				`rip-open: Exclude patterns: ${searchParams.excludePatterns.join(", ")}`
+			);
+			console.log(
+				`rip-open: Additional ripgrep args: ${searchParams.additionalRipgrepArgs.join(
+					" "
+				)}`
 			);
 			console.log(`rip-open: Ripgrep base args: ${baseArgs.join(" ")}`);
 
@@ -496,6 +510,7 @@ export class DirectorySearcher {
 			throw error;
 		}
 	}
+
 	/**
 	 * Parse ripgrep output to extract unique directories
 	 */
@@ -568,6 +583,7 @@ export class DirectorySearcher {
 
 		return directoryItems;
 	}
+
 	/**
 	 * Find directories using ripgrep + fzf for enhanced fuzzy matching
 	 */
@@ -580,27 +596,38 @@ export class DirectorySearcher {
 				// Get available ripgrep path
 				const rgPath = await this.checkRipgrepAvailability();
 				// Get all valid search paths
-				const searchPaths = await ConfigurationManager.getValidSearchPaths();
-
-				// First, run ripgrep to get all files
+				const searchPaths = await ConfigurationManager.getValidSearchPaths(); // First, run ripgrep to get all files
 				const baseArgs: string[] = [
 					"--files", // List files
 					"--null", // Use null separator
-					"--hidden", // Include hidden files
-					"--no-ignore", // Don't respect .gitignore initially
 					"--max-depth",
 					(searchParams.maxDepth + 2).toString(), // Search deeper when fzf is available
 				];
+
+				// Add configurable options
+				if (searchParams.includeHidden) {
+					baseArgs.push("--hidden");
+				}
+				if (!searchParams.respectGitignore) {
+					baseArgs.push("--no-ignore");
+				}
+
+				// Add additional user-specified ripgrep arguments
+				baseArgs.push(...searchParams.additionalRipgrepArgs);
 
 				// Add exclude patterns
 				for (const pattern of searchParams.excludePatterns) {
 					baseArgs.push("--glob", `!${pattern}`);
 				}
-
 				console.log(
 					`rip-open: Running ripgrep for fzf across ${
 						searchPaths.length || "root"
 					} search paths`
+				);
+				console.log(
+					`rip-open: Max depth: ${searchParams.maxDepth + 2}, Include hidden: ${
+						searchParams.includeHidden
+					}, Respect gitignore: ${searchParams.respectGitignore}`
 				);
 
 				// Run ripgrep across all search paths

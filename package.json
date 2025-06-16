@@ -156,11 +156,19 @@
 						".nuget",
 						".yarn",
 						".pnpm-store",
+						"pnpm-store",
 						".local/share",
 						".config",
 						".ssh",
 						".gnupg",
-						".gpg"
+						".gpg",
+						"ShaderCache",
+						"PackageCache",
+						"StateCache",
+						"ScriptAssemblies",
+						"BurstCache",
+						"Artifacts",
+						"CMakeFiles"
 					],
 					"description": "Patterns to exclude from search (default includes common build/cache directories)"
 				},
@@ -208,6 +216,24 @@
 					"type": "number",
 					"default": 100,
 					"description": "Maximum number of items to display in the UI before requiring filtering"
+				},
+				"ripOpen.includeHidden": {
+					"type": "boolean",
+					"default": true,
+					"description": "Include hidden files and directories in search (adds --hidden flag to ripgrep)"
+				},
+				"ripOpen.respectGitignore": {
+					"type": "boolean",
+					"default": false,
+					"description": "Respect .gitignore and other ignore files (removes --no-ignore flag from ripgrep)"
+				},
+				"ripOpen.additionalRipgrepArgs": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "Additional command-line arguments to pass to ripgrep (e.g., ['--follow', '--case-sensitive'])"
 				}
 			}
 		}

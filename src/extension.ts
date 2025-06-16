@@ -60,12 +60,35 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	);
 
+	// Register configuration change listener
+	const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
+		// Check if any ripgrep-related settings changed
+		const ripgrepSettings = [
+			'ripOpen.includeHidden',
+			'ripOpen.respectGitignore',
+			'ripOpen.additionalRipgrepArgs',
+			'ripOpen.maxDepth',
+			'ripOpen.excludePatterns',
+			'ripOpen.searchPath'
+		];
+
+		const ripgrepSettingsChanged = ripgrepSettings.some(setting => 
+			event.affectsConfiguration(setting)
+		);
+
+		if (ripgrepSettingsChanged) {
+			console.log('rip-open: Ripgrep configuration changed, clearing cache');
+			cacheManager.clearCacheOnConfigChange();
+		}
+	});
+
 	context.subscriptions.push(
 		addToWorkspaceCommand,
 		openInCurrentWindowCommand,
 		openInNewWindowCommand,
 		clearCacheCommand,
-		resetSettingsCommand
+		resetSettingsCommand,
+		configChangeDisposable
 	);
 }
 

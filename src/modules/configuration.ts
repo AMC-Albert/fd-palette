@@ -24,6 +24,10 @@ export class ConfigurationManager {
 			fzfOptions:
 				config.get<string>("fzfOptions") ||
 				"--height=60% --layout=reverse --border --info=inline --cycle",
+			includeHidden: config.get<boolean>("includeHidden") ?? true,
+			respectGitignore: config.get<boolean>("respectGitignore") ?? false,
+			additionalRipgrepArgs:
+				config.get<string[]>("additionalRipgrepArgs") || [],
 		};
 	}
 
@@ -210,11 +214,14 @@ export class ConfigurationManager {
 		);
 		if (choice !== "Reset Settings") {
 			return;
-		} // Reset all settings to undefined (which restores defaults)
+		}		// Reset all settings to undefined (which restores defaults)
 		const settingsToReset = [
 			"searchPath",
 			"maxDepth",
 			"excludePatterns",
+			"includeHidden",
+			"respectGitignore",
+			"additionalRipgrepArgs",
 			"enableCache",
 			"cacheDurationMinutes",
 			"enableBackgroundRefresh",
