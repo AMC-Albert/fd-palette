@@ -15,6 +15,7 @@ export interface SearchParams {
 	searchPath: string[];
 	maxDepth: number;
 	excludePatterns: string[];
+	ripgrepPath: string;
 	fzfPath: string;
 	enableFzf: boolean;
 	fzfOptions: string;

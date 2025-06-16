@@ -4,7 +4,7 @@ import * as path from "path";
 import { SearchParams } from "./types";
 
 export class ConfigurationManager {
-	private static readonly CONFIG_SECTION = "fdPalette";
+	private static readonly CONFIG_SECTION = "ripAdd";
 	private static readonly PATH_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 	private static _extensionContext: vscode.ExtensionContext | undefined;
 
@@ -14,11 +14,11 @@ export class ConfigurationManager {
 	static getSearchParams(): SearchParams {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		const searchPaths = config.get<string[]>("searchPath") || [];
-
 		return {
 			searchPath: searchPaths,
 			maxDepth: config.get<number>("maxDepth") || 5,
 			excludePatterns: config.get<string[]>("excludePatterns") || [],
+			ripgrepPath: config.get<string>("ripgrepPath") || "auto",
 			fzfPath: config.get<string>("fzfPath") || "fzf",
 			enableFzf: config.get<boolean>("enableFzf") ?? true,
 			fzfOptions:
@@ -28,7 +28,56 @@ export class ConfigurationManager {
 	}
 
 	/**
+	 * Gets all valid directories from the searchPath array, with caching
+	 */
+	static async getValidSearchPaths(): Promise<string[]> {
+		const searchParams = this.getSearchParams();
+		const searchPaths = searchParams.searchPath;
+
+		// If no paths configured, return empty array (search from root)
+		if (!searchPaths || searchPaths.length === 0) {
+			return [];
+		}
+
+		const validPaths: string[] = [];
+
+		// Check all paths and collect valid ones
+		for (const searchPath of searchPaths) {
+			if (!searchPath.trim()) {
+				continue;
+			}
+
+			const expandedPath = this.expandPath(searchPath);
+			try {
+				if (await this.isDirectoryValid(expandedPath)) {
+					validPaths.push(expandedPath);
+				}
+			} catch (error) {
+				// Log but don't throw - continue checking other paths
+				console.warn(`rip-add: Invalid search path '${searchPath}': ${error}`);
+			}
+		}
+
+		if (validPaths.length === 0) {
+			console.warn(
+				`rip-add: No valid directories found in searchPath: ${searchPaths.join(
+					", "
+				)}, using root search`
+			);
+		} else {
+			console.log(
+				`rip-add: Found ${
+					validPaths.length
+				} valid search paths: ${validPaths.join(", ")}`
+			);
+		}
+
+		return validPaths;
+	}
+
+	/**
 	 * Gets the first valid directory from the searchPath array, with caching
+	 * @deprecated Use getValidSearchPaths() for better multi-path support
 	 */
 	static async getValidSearchPath(): Promise<string> {
 		const searchPaths = this.getSearchParams().searchPath;
@@ -144,15 +193,9 @@ export class ConfigurationManager {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return config.get<number>("uiDisplayLimit") ?? 100;
 	}
-
 	static isBackgroundRefreshEnabled(): boolean {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return config.get<boolean>("enableBackgroundRefresh") ?? true;
-	}
-
-	static getBackgroundRefreshThreshold(): number {
-		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-		return config.get<number>("backgroundRefreshThreshold") ?? 0.5;
 	}
 
 	static async resetSettingsToDefault(): Promise<void> {
@@ -160,15 +203,14 @@ export class ConfigurationManager {
 
 		// Show confirmation dialog
 		const choice = await vscode.window.showWarningMessage(
-			"Are you sure you want to reset all fd-palette settings to their default values?",
+			"Are you sure you want to reset all rip-add settings to their default values?",
 			{ modal: true },
 			"Reset Settings",
 			"Cancel"
 		);
 		if (choice !== "Reset Settings") {
 			return;
-		}
-		// Reset all settings to undefined (which restores defaults)
+		}		// Reset all settings to undefined (which restores defaults)
 		const settingsToReset = [
 			"searchPath",
 			"maxDepth",
@@ -176,7 +218,6 @@ export class ConfigurationManager {
 			"enableCache",
 			"cacheDurationMinutes",
 			"enableBackgroundRefresh",
-			"backgroundRefreshThreshold",
 			"openInWindow",
 			"excludeHomeDotFolders",
 			"uiDisplayLimit",
@@ -190,11 +231,15 @@ export class ConfigurationManager {
 			);
 
 			vscode.window.showInformationMessage(
-				"fd-palette settings have been reset to default values."
+				"rip-add settings have been reset to default values."
 			);
 		} catch (error) {
 			vscode.window.showErrorMessage(`Failed to reset settings: ${error}`);
 		}
+	}
+	static getRipgrepPath(): string {
+		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+		return config.get<string>("ripgrepPath") || "auto";
 	}
 
 	static getFzfPath(): string {

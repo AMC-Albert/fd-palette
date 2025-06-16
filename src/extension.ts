@@ -10,7 +10,7 @@ let searchOrchestrator: SearchOrchestrator;
 let cacheManager: CacheManager;
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log("fd-palette extension is now active!");
+	console.log("rip-add extension is now active!");
 
 	// Set extension context for DirectorySearcher (needed for caching)
 	DirectorySearcher.setExtensionContext(context);
@@ -27,35 +27,27 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register commands
 	const addToWorkspaceCommand = vscode.commands.registerCommand(
-		"fd-palette.addToWorkspace",
+		"rip-add.addToWorkspace",
 		async () => {
 			await searchOrchestrator.searchAndAddDirectories();
 		}
 	);
 
 	const openInWindowCommand = vscode.commands.registerCommand(
-		"fd-palette.openInWindow",
+		"rip-add.openInWindow",
 		async () => {
 			await searchOrchestrator.searchAndOpenInWindow();
 		}
 	);
 	const clearCacheCommand = vscode.commands.registerCommand(
-		"fd-palette.clearCache",
+		"rip-add.clearCache",
 		async () => {
 			cacheManager.clearCache();
 		}
 	);
 	const resetSettingsCommand = vscode.commands.registerCommand(
-		"fd-palette.resetSettings",
-		async () => {
+		"rip-add.resetSettings",		async () => {
 			await ConfigurationManager.resetSettingsToDefault();
-		}
-	);
-
-	const checkFzfCommand = vscode.commands.registerCommand(
-		"fd-palette.checkFzfInstallation",
-		async () => {
-			await searchOrchestrator.checkFzfInstallation();
 		}
 	);
 
@@ -63,8 +55,7 @@ export function activate(context: vscode.ExtensionContext) {
 		addToWorkspaceCommand,
 		openInWindowCommand,
 		clearCacheCommand,
-		resetSettingsCommand,
-		checkFzfCommand
+		resetSettingsCommand
 	);
 }
 

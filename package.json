@@ -1,13 +1,13 @@
 {
-	"name": "fd-palette",
+	"name": "rip-add",
 	"author": "Albert O'Shea",
-	"publisher": "fd-palette-dev",
-	"displayName": "fd Palette",
-	"description": "System-wide directory search using fd with workspace integration.",
+	"publisher": "rip-add-dev",
+	"displayName": "Rip Add",
+	"description": "Quick directory search and workspace management using ripgrep and fzf",
 	"version": "0.4.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/AMC-Albert/fd-palette"
+		"url": "https://github.com/AMC-Albert/rip-add"
 	},
 	"engines": {
 		"vscode": "^1.90.0"
@@ -16,69 +16,66 @@
 		"Other"
 	],
 	"keywords": [
-		"fd",
+		"ripgrep",
+		"fzf",
+		"rg",
 		"search",
 		"directories",
 		"workspace",
 		"file-explorer"
 	],
 	"main": "./out/extension.js",
-	"contributes": {		"commands": [
+	"contributes": {
+		"commands": [
 			{
-				"command": "fd-palette.addToWorkspace",
+				"command": "rip-add.addToWorkspace",
 				"title": "Add Directories to Workspace",
-				"category": "fd Palette"
+				"category": "Rip Add"
 			},
 			{
-				"command": "fd-palette.openInWindow",
+				"command": "rip-add.openInWindow",
 				"title": "Open Directory in New Window",
-				"category": "fd Palette"
-			},
-			{
-				"command": "fd-palette.clearCache",
+				"category": "Rip Add"
+			},			{
+				"command": "rip-add.clearCache",
 				"title": "Clear Search Cache",
-				"category": "fd Palette"
+				"category": "Rip Add"
 			},
 			{
-				"command": "fd-palette.resetSettings",
+				"command": "rip-add.resetSettings",
 				"title": "Reset Settings to Default",
-				"category": "fd Palette"
-			},
-			{
-				"command": "fd-palette.checkFzfInstallation",
-				"title": "Check fzf Installation",
-				"category": "fd Palette"
+				"category": "Rip Add"
 			}
 		],
 		"keybindings": [
 			{
-				"command": "fd-palette.addToWorkspace",
+				"command": "rip-add.addToWorkspace",
 				"key": "ctrl+alt+d",
 				"mac": "cmd+alt+d"
 			},
 			{
-				"command": "fd-palette.openInWindow",
+				"command": "rip-add.openInWindow",
 				"key": "ctrl+alt+shift+d",
 				"mac": "cmd+alt+shift+d"
 			}
 		],
 		"configuration": {
-			"title": "fd Palette",
+			"title": "Rip Add",
 			"properties": {
-				"fdPalette.searchPath": {
+				"ripAdd.searchPath": {
 					"type": "array",
 					"items": {
 						"type": "string"
 					},
 					"default": [],
-					"description": "List of search paths for fd - first valid directory wins (leave empty to search from root)"
+					"description": "List of search paths for directory search - first valid directory wins (leave empty to search from root)"
 				},
-				"fdPalette.maxDepth": {
+				"ripAdd.maxDepth": {
 					"type": "number",
 					"default": 10,
-					"description": "Maximum search depth for fd"
+					"description": "Maximum search depth for ripgrep"
 				},
-				"fdPalette.excludePatterns": {
+				"ripAdd.excludePatterns": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -152,54 +149,54 @@
 						".config",
 						".ssh",
 						".gnupg",
-						".gpg"					],
-					"description": "Patterns to exclude from search"
+						".gpg"
+					],
+					"description": "Patterns to exclude from search (default includes common build/cache directories)"
 				},
-				"fdPalette.fzfPath": {
+				"ripAdd.ripgrepPath": {
+					"type": "string",
+					"default": "auto",
+					"description": "Path to ripgrep executable (use 'auto' for automatic detection, 'rg' if in PATH, or specify full path)"
+				},
+				"ripAdd.fzfPath": {
 					"type": "string",
 					"default": "fzf",
 					"description": "Path to fzf executable (use 'fzf' if in PATH)"
 				},
-				"fdPalette.enableFzf": {
+				"ripAdd.enableFzf": {
 					"type": "boolean",
 					"default": true,
 					"description": "Enable fzf integration for improved fuzzy matching when available"
 				},
-				"fdPalette.fzfOptions": {
+				"ripAdd.fzfOptions": {
 					"type": "string",
 					"default": "--height=60% --layout=reverse --border --info=inline --cycle",
 					"description": "Additional options to pass to fzf for enhanced fuzzy matching"
 				},
-				"fdPalette.enableCache": {
+				"ripAdd.enableCache": {
 					"type": "boolean",
 					"default": true,
-					"description": "Enable caching of search results to improve performance"
-				},"fdPalette.cacheDurationMinutes": {
+					"description": "Enable caching of search results for faster subsequent searches"
+				},
+				"ripAdd.cacheDurationMinutes": {
 					"type": "number",
-					"default": 5,
-					"description": "How long to cache search results (in minutes)"
+					"default": 2,
+					"description": "Cache duration in minutes before results are considered stale"
 				},
-				"fdPalette.enableBackgroundRefresh": {
+				"ripAdd.enableBackgroundRefresh": {
 					"type": "boolean",
 					"default": true,
-					"description": "Enable background cache refresh for better performance (stale-while-revalidate pattern)"
+					"description": "Enable background cache refresh for better performance (automatically refreshes expired cache in background)"
 				},
-				"fdPalette.backgroundRefreshThreshold": {
-					"type": "number",
-					"default": 0.5,
-					"minimum": 0.1,
-					"maximum": 0.9,
-					"description": "When cache is older than this fraction of cache duration, trigger background refresh (0.5 = 50%)"
-				},
-				"fdPalette.openInWindow": {
+				"ripAdd.openInWindow": {
 					"type": "boolean",
 					"default": true,
-					"description": "When opening directories, open in new window instead of current window"
+					"description": "Whether to open directories in a new window by default"
 				},
-				"fdPalette.uiDisplayLimit": {
+				"ripAdd.uiDisplayLimit": {
 					"type": "number",
 					"default": 100,
-					"description": "Maximum number of directories to display initially in the picker (0 = no limit)"
+					"description": "Maximum number of items to display in the UI before requiring filtering"
 				}
 			}
 		}

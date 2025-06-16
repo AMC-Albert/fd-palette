@@ -78,7 +78,7 @@ export class DirectoryFilter {
 			});
 
 			fzfChild.stderr?.on("data", (data) => {
-				console.warn(`fd-palette: fzf filter error: ${data.toString()}`);
+				console.warn(`rip-add: fzf filter error: ${data.toString()}`);
 				hasError = true;
 			});
 
@@ -121,7 +121,7 @@ export class DirectoryFilter {
 			});
 
 			fzfChild.on("error", (error) => {
-				console.warn(`fd-palette: fzf spawn error: ${error.message}`);
+				console.warn(`rip-add: fzf spawn error: ${error.message}`);
 				// Fall back to enhanced simple filtering
 				const fallbackFiltered = DirectoryFilter.fallbackFilter(
 					datasetToFilter,

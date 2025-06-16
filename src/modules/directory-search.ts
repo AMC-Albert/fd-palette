@@ -7,7 +7,6 @@ import { DirectoryItem, SearchParams } from "./types";
 import { ConfigurationManager } from "./configuration";
 
 export class DirectorySearcher {
-	private static readonly RG_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 	private static _extensionContext: vscode.ExtensionContext | undefined;
 
 	static setExtensionContext(context: vscode.ExtensionContext): void {
@@ -72,19 +71,18 @@ export class DirectorySearcher {
 
 			for (const rgPath of possiblePaths) {
 				if (fs.existsSync(rgPath)) {
-					console.log(`fd-palette: Found bundled ripgrep at: ${rgPath}`);
+					console.log(`rip-add: Found bundled ripgrep at: ${rgPath}`);
 					return rgPath;
 				}
 			}
 
-			console.log("fd-palette: No bundled ripgrep found in common locations");
+			console.log("rip-add: No bundled ripgrep found in common locations");
 			return null;
 		} catch (error) {
-			console.warn("fd-palette: Error detecting bundled ripgrep:", error);
+			console.warn("rip-add: Error detecting bundled ripgrep:", error);
 			return null;
 		}
 	}
-
 	/**
 	 * Check if ripgrep is available (either bundled or in PATH)
 	 */
@@ -94,56 +92,50 @@ export class DirectorySearcher {
 			return this._getAvailableRipgrepPath();
 		}
 
-		// Check persistent cache first
+		// Check persistent cache first (no time-based expiration)
 		const cacheKey = "ripgrep-availability";
 		const cached = this._extensionContext.globalState.get<{
 			available: boolean;
 			path: string;
-			timestamp: number;
 		}>(cacheKey);
-		const now = Date.now();
 
-		if (cached && now - cached.timestamp < this.RG_CACHE_DURATION) {
+		if (cached) {
 			if (cached.available) {
 				console.log(
-					`fd-palette: ripgrep availability cache HIT - available: ${cached.path}`
+					`rip-add: ripgrep availability cache HIT - available: ${cached.path}`
 				);
 				return cached.path;
 			} else {
-				console.log(
-					"fd-palette: ripgrep availability cache HIT - not available"
-				);
+				console.log("rip-add: ripgrep availability cache HIT - not available");
 				throw new Error("ripgrep command failed (cached result)");
 			}
 		}
 
-		console.log("fd-palette: ripgrep availability cache MISS, checking...");
+		console.log("rip-add: ripgrep availability cache MISS, checking...");
 
-		// Not cached or expired, check availability
+		// Not cached, check availability
 		try {
 			const rgPath = await this._getAvailableRipgrepPath();
 			console.log(
-				`fd-palette: ripgrep availability check passed, caching result: ${rgPath}`
+				`rip-add: ripgrep availability check passed, caching result: ${rgPath}`
 			);
 
-			// Cache the successful result
+			// Cache the successful result (no timestamp needed)
 			await this._extensionContext.globalState.update(cacheKey, {
 				available: true,
 				path: rgPath,
-				timestamp: now,
 			});
 
 			return rgPath;
 		} catch (error) {
 			console.log(
-				`fd-palette: ripgrep availability check failed, caching result: ${error}`
+				`rip-add: ripgrep availability check failed, caching result: ${error}`
 			);
 
-			// Cache the failure
+			// Cache the failure (no timestamp needed)
 			await this._extensionContext.globalState.update(cacheKey, {
 				available: false,
 				path: "",
-				timestamp: now,
 			});
 
 			throw error;
@@ -151,10 +143,35 @@ export class DirectorySearcher {
 	}
 
 	/**
-	 * Get the first available ripgrep path
+	 * Invalidate ripgrep availability cache (call when ripgrep execution fails)
+	 */
+	static async invalidateRipgrepCache(): Promise<void> {
+		if (this._extensionContext) {
+			const cacheKey = "ripgrep-availability";
+			await this._extensionContext.globalState.update(cacheKey, undefined);
+			console.log("rip-add: ripgrep availability cache invalidated");
+		}
+	}
+	/**
+	 * Get the first available ripgrep path based on user configuration
 	 */
 	private static async _getAvailableRipgrepPath(): Promise<string> {
-		// First try bundled ripgrep
+		const { ConfigurationManager } = await import("./configuration.js");
+		const configuredPath = ConfigurationManager.getRipgrepPath();
+
+		if (configuredPath !== "auto") {
+			// User specified a custom ripgrep path
+			try {
+				await this._runRipgrepAvailabilityCheck(configuredPath);
+				return configuredPath;
+			} catch (error) {
+				throw new Error(
+					`Configured ripgrep path "${configuredPath}" is not available: ${error}`
+				);
+			}
+		}
+
+		// Auto mode: try bundled ripgrep first, then system ripgrep
 		const bundledRg = this.getBundledRipgrepPath();
 		if (bundledRg) {
 			try {
@@ -162,7 +179,7 @@ export class DirectorySearcher {
 				return bundledRg;
 			} catch (error) {
 				console.warn(
-					"fd-palette: Bundled ripgrep failed availability check:",
+					"rip-add: Bundled ripgrep failed availability check:",
 					error
 				);
 			}
@@ -206,7 +223,6 @@ export class DirectorySearcher {
 			});
 		});
 	}
-
 	/**
 	 * Check if fzf is available (for enhanced fuzzy matching)
 	 */
@@ -216,52 +232,73 @@ export class DirectorySearcher {
 			return this._runFzfAvailabilityCheck(fzfPath);
 		}
 
-		// Check persistent cache first
+		// Check persistent cache first (no time-based expiration)
 		const cacheKey = `fzf-availability-${fzfPath}`;
 		const cached = this._extensionContext.globalState.get<{
 			available: boolean;
-			timestamp: number;
 		}>(cacheKey);
-		const now = Date.now();
 
-		if (cached && now - cached.timestamp < this.RG_CACHE_DURATION) {
+		if (cached) {
 			if (cached.available) {
-				console.log(`fd-palette: fzf availability cache HIT - available: ${fzfPath}`);
+				console.log(
+					`rip-add: fzf availability cache HIT - available: ${fzfPath}`
+				);
 				return Promise.resolve();
 			} else {
-				console.log(`fd-palette: fzf availability cache HIT - not available: ${fzfPath}`);
+				console.log(
+					`rip-add: fzf availability cache HIT - not available: ${fzfPath}`
+				);
 				return Promise.reject(new Error("fzf command failed (cached result)"));
 			}
 		}
 
-		console.log(`fd-palette: fzf availability cache MISS for: ${fzfPath}, checking...`);
+		console.log(
+			`rip-add: fzf availability cache MISS for: ${fzfPath}, checking...`
+		);
 
-		// Not cached or expired, check availability
+		// Not cached, check availability
 		try {
 			await this._runFzfAvailabilityCheck(fzfPath);
-			console.log(`fd-palette: fzf availability check passed, caching result: ${fzfPath}`);
+			console.log(
+				`rip-add: fzf availability check passed, caching result: ${fzfPath}`
+			);
 
-			// Cache the successful result
+			// Cache the successful result (no timestamp needed)
 			await this._extensionContext.globalState.update(cacheKey, {
 				available: true,
-				timestamp: now,
 			});
 		} catch (error) {
-			console.log(`fd-palette: fzf availability check failed, caching result: ${fzfPath}`);
+			console.log(
+				`rip-add: fzf availability check failed, caching result: ${fzfPath}`
+			);
 
-			// Cache the failed result
+			// Cache the failed result (no timestamp needed)
 			await this._extensionContext.globalState.update(cacheKey, {
 				available: false,
-				timestamp: now,
 			});
 			throw error;
 		}
 	}
 
 	/**
+	 * Invalidate fzf availability cache (call when fzf execution fails)
+	 */
+	static async invalidateFzfCache(fzfPath: string): Promise<void> {
+		if (this._extensionContext) {
+			const cacheKey = `fzf-availability-${fzfPath}`;
+			await this._extensionContext.globalState.update(cacheKey, undefined);
+			console.log(
+				`rip-add: fzf availability cache invalidated for: ${fzfPath}`
+			);
+		}
+	}
+
+	/**
 	 * Run fzf availability check
 	 */
-	private static async _runFzfAvailabilityCheck(fzfPath: string): Promise<void> {
+	private static async _runFzfAvailabilityCheck(
+		fzfPath: string
+	): Promise<void> {
 		return new Promise((resolve, reject) => {
 			const process = spawn(fzfPath, ["--version"], {
 				stdio: ["ignore", "pipe", "pipe"],
@@ -270,7 +307,8 @@ export class DirectorySearcher {
 			let output = "";
 			process.stdout?.on("data", (data) => {
 				output += data.toString();
-			});			process.on("close", (code) => {
+			});
+			process.on("close", (code) => {
 				if (code === 0) {
 					// fzf version output doesn't always contain "fzf" string, just check exit code
 					resolve();
@@ -278,7 +316,6 @@ export class DirectorySearcher {
 					reject(new Error(`fzf check failed with code ${code}`));
 				}
 			});
-
 			process.on("error", (error) => {
 				reject(error);
 			});
@@ -286,40 +323,41 @@ export class DirectorySearcher {
 	}
 
 	/**
-	 * Find directories using ripgrep
+	 * Run ripgrep across multiple search paths and merge results
 	 */
-	static async findDirectories(
-		searchParams: SearchParams,
+	private static async _runRipgrepMultiplePaths(
+		rgPath: string,
+		baseArgs: string[],
+		searchPaths: string[],
 		token: vscode.CancellationToken
-	): Promise<DirectoryItem[]> {
-		return new Promise(async (resolve, reject) => {
-			try {
-				// Get available ripgrep path
-				const rgPath = await this.checkRipgrepAvailability();
+	): Promise<string> {
+		return new Promise((resolve, reject) => {
+			let allOutput = "";
+			let pendingCommands = 0;
+			let hasError = false;
 
-				// Get the valid search path
-				const searchPath = await ConfigurationManager.getValidSearchPath();
-
-				const args: string[] = [
-					"--files", // List files (we'll filter directories from the output)
-					"--null", // Use null separator for better parsing
-					"--hidden", // Include hidden files/directories
-					"--no-ignore", // Don't respect .gitignore initially (we'll filter ourselves)
-					"--max-depth",
-					searchParams.maxDepth.toString(),
-				];
-
-				// Add exclude patterns using ripgrep's glob syntax
-				for (const pattern of searchParams.excludePatterns) {
-					args.push("--glob", `!${pattern}`);
+			const handleCompletion = () => {
+				if (pendingCommands === 0 && !hasError) {
+					resolve(allOutput);
 				}
+			};
 
-				// Add search path
+			// If no search paths, search from root
+			if (!searchPaths || searchPaths.length === 0) {
+				searchPaths = [""];
+			}
+			// Run ripgrep for each search path
+			for (const searchPath of searchPaths) {
+				pendingCommands++;
+
+				const args = [...baseArgs];
 				if (searchPath && searchPath.trim()) {
 					args.push(searchPath);
 				}
 
-				console.log(`fd-palette: Running ripgrep: ${rgPath} ${args.join(" ")}`);
+				console.log(
+					`rip-add: Running ripgrep command: ${rgPath} ${args.join(" ")}`
+				);
 
 				const child = spawn(rgPath, args, {
 					stdio: ["ignore", "pipe", "pipe"],
@@ -339,53 +377,140 @@ export class DirectorySearcher {
 				// Handle cancellation
 				token.onCancellationRequested(() => {
 					child.kill();
-					reject(new Error("Search was cancelled"));
-				});
-
-				child.on("close", (code) => {
-					try {
-						if (token.isCancellationRequested) {
-							reject(new Error("Search was cancelled"));
-							return;
-						}
-
-						if (code !== 0 && code !== 1) {
-							// ripgrep exits with 1 when no matches found, which is normal
-							console.error(`fd-palette: ripgrep stderr: ${stderr}`);
-							reject(new Error(`ripgrep failed with code ${code}: ${stderr}`));
-							return;
-						}
-
-						// Parse ripgrep output to extract directories
-						const directories = this._parseRipgrepOutput(stdout);
-						console.log(
-							`fd-palette: Found ${directories.length} directories using ripgrep`
-						);
-						resolve(directories);
-					} catch (error) {
-						reject(error);
+					if (!hasError) {
+						hasError = true;
+						reject(new Error("Search was cancelled"));
 					}
 				});
+				child.on("close", (code) => {
+					pendingCommands--;
 
-				child.on("error", (error) => {
-					reject(new Error(`Failed to run ripgrep: ${error.message}`));
+					if (hasError) {
+						return;
+					}
+
+					if (token.isCancellationRequested) {
+						hasError = true;
+						reject(new Error("Search was cancelled"));
+						return;
+					}
+					if (code !== 0 && code !== 1) {
+						// ripgrep exits with 1 when no matches found, which is normal
+						console.error(
+							`rip-add: ripgrep stderr for path "${searchPath}": ${stderr}`
+						);
+						hasError = true;
+						// Invalidate cache since ripgrep execution failed
+						this.invalidateRipgrepCache();
+						reject(new Error(`ripgrep failed with code ${code}: ${stderr}`));
+						return;
+					}
+
+					// Log results per path
+					const resultCount = stdout
+						.split("\0")
+						.filter((line) => line.trim()).length;
+					console.log(
+						`rip-add: Path "${
+							searchPath || "(root)"
+						}" returned ${resultCount} file results`
+					);
+
+					// Append output from this path
+					allOutput += stdout;
+					handleCompletion();
 				});
-			} catch (error) {
-				reject(error);
+				child.on("error", (error) => {
+					pendingCommands--;
+					if (!hasError) {
+						hasError = true;
+						// Invalidate cache since ripgrep execution failed
+						this.invalidateRipgrepCache();
+						reject(new Error(`Failed to run ripgrep: ${error.message}`));
+					}
+				});
 			}
 		});
 	}
 
 	/**
+	 * Find directories using ripgrep
+	 */
+	static async findDirectories(
+		searchParams: SearchParams,
+		token: vscode.CancellationToken
+	): Promise<DirectoryItem[]> {
+		try {
+			// Get available ripgrep path
+			const rgPath = await this.checkRipgrepAvailability();
+
+			// Get all valid search paths
+			const searchPaths = await ConfigurationManager.getValidSearchPaths();
+
+			const baseArgs: string[] = [
+				"--files", // List files (we'll filter directories from the output)
+				"--null", // Use null separator for better parsing
+				"--hidden", // Include hidden files/directories
+				"--no-ignore", // Don't respect .gitignore initially (we'll filter ourselves)
+				"--max-depth",
+				searchParams.maxDepth.toString(),
+			];
+
+			// Add exclude patterns using ripgrep's glob syntax
+			for (const pattern of searchParams.excludePatterns) {
+				baseArgs.push("--glob", `!${pattern}`);
+			}
+
+			console.log(
+				`rip-add: Search paths: ${
+					searchPaths.length > 0 ? searchPaths.join(", ") : "none (root search)"
+				}`
+			);
+			console.log(
+				`rip-add: Max depth: ${
+					searchParams.maxDepth
+				}, Exclude patterns: ${searchParams.excludePatterns.join(", ")}`
+			);
+			console.log(`rip-add: Ripgrep base args: ${baseArgs.join(" ")}`);
+
+			// Run ripgrep across all search paths
+			const stdout = await this._runRipgrepMultiplePaths(
+				rgPath,
+				baseArgs,
+				searchPaths,
+				token
+			);
+
+			// Parse ripgrep output to extract directories
+			const directories = this._parseRipgrepOutput(stdout);
+			console.log(
+				`rip-add: Found ${
+					directories.length
+				} directories using ripgrep across ${
+					searchPaths.length || "root"
+				} search paths`
+			);
+
+			return directories;
+		} catch (error) {
+			throw error;
+		}
+	}
+	/**
 	 * Parse ripgrep output to extract unique directories
 	 */
 	private static _parseRipgrepOutput(output: string): DirectoryItem[] {
 		if (!output.trim()) {
+			console.log("rip-add: No ripgrep output to parse");
 			return [];
 		}
 
 		const directories = new Set<string>();
 		const lines = output.split("\0").filter((line) => line.trim()); // Split by null separator
+
+		console.log(
+			`rip-add: Parsing ${lines.length} file paths from ripgrep output`
+		);
 
 		// Extract directory paths from file paths
 		for (const filePath of lines) {
@@ -395,15 +520,40 @@ export class DirectorySearcher {
 			}
 		}
 
+		console.log(
+			`rip-add: Found ${directories.size} unique directories before filtering`
+		);
+		// Sample some directories for debugging
+		const sampleDirs = Array.from(directories).slice(0, 10);
+		console.log(`rip-add: Sample directories: ${sampleDirs.join(", ")}`);
+
+		// Look specifically for underscore directories
+		const underscoreDirs = Array.from(directories).filter((dir) =>
+			dir.includes("_")
+		);
+		console.log(
+			`rip-add: Found ${
+				underscoreDirs.length
+			} directories containing underscores: ${underscoreDirs
+				.slice(0, 5)
+				.join(", ")}`
+		);
+
 		// Convert to DirectoryItem array and sort
 		const directoryItems: DirectoryItem[] = Array.from(directories)
 			.filter((dir) => {
 				// Filter out common undesirable directories
 				const dirName = path.basename(dir);
-				return (
-					!dirName.startsWith(".") ||
-					ConfigurationManager.shouldExcludeHomeDotFolders() === false
-				);
+				const shouldExcludeDotFolders =
+					ConfigurationManager.shouldExcludeHomeDotFolders();
+				const isDotFolder = dirName.startsWith(".");
+				const shouldInclude = !isDotFolder || !shouldExcludeDotFolders;
+
+				if (!shouldInclude) {
+					console.log(`rip-add: Filtering out dot folder: ${dir}`);
+				}
+
+				return shouldInclude;
 			})
 			.map((fullPath) => ({
 				label: path.basename(fullPath),
@@ -411,6 +561,10 @@ export class DirectorySearcher {
 				fullPath: fullPath,
 			}))
 			.sort((a, b) => a.label.localeCompare(b.label));
+
+		console.log(
+			`rip-add: Final directory count after filtering: ${directoryItems.length}`
+		);
 
 		return directoryItems;
 	}
@@ -425,187 +579,203 @@ export class DirectorySearcher {
 			try {
 				// Get available ripgrep path
 				const rgPath = await this.checkRipgrepAvailability();
-
-				// Get the valid search path
-				const searchPath = await ConfigurationManager.getValidSearchPath();
+				// Get all valid search paths
+				const searchPaths = await ConfigurationManager.getValidSearchPaths();
 
 				// First, run ripgrep to get all files
-				const rgArgs: string[] = [
+				const baseArgs: string[] = [
 					"--files", // List files
 					"--null", // Use null separator
 					"--hidden", // Include hidden files
 					"--no-ignore", // Don't respect .gitignore initially
-					"--max-depth", (searchParams.maxDepth + 2).toString(), // Search deeper when fzf is available
+					"--max-depth",
+					(searchParams.maxDepth + 2).toString(), // Search deeper when fzf is available
 				];
 
 				// Add exclude patterns
 				for (const pattern of searchParams.excludePatterns) {
-					rgArgs.push("--glob", `!${pattern}`);
+					baseArgs.push("--glob", `!${pattern}`);
 				}
 
-				if (searchPath && searchPath.trim()) {
-					rgArgs.push(searchPath);
+				console.log(
+					`rip-add: Running ripgrep for fzf across ${
+						searchPaths.length || "root"
+					} search paths`
+				);
+
+				// Run ripgrep across all search paths
+				const rgOutput = await this._runRipgrepMultiplePaths(
+					rgPath,
+					baseArgs,
+					searchPaths,
+					token
+				);
+				// Extract unique directories from ripgrep output
+				const directories = new Set<string>();
+				const lines = rgOutput
+					.split("\0")
+					.filter((line: string) => line.trim());
+
+				for (const filePath of lines) {
+					if (filePath.trim()) {
+						const dirPath = path.dirname(filePath);
+						directories.add(dirPath);
+					}
 				}
 
-				console.log(`fd-palette: Running ripgrep for fzf: ${rgPath} ${rgArgs.join(" ")}`);
+				// Convert to array and prepare for fzf sorting
+				const dirArray = Array.from(directories)
+					.filter((dir) => {
+						const dirName = path.basename(dir);
+						return (
+							!dirName.startsWith(".") ||
+							ConfigurationManager.shouldExcludeHomeDotFolders() === false
+						);
+					})
+					.sort();
+				if (dirArray.length === 0) {
+					resolve([]);
+					return;
+				}
 
-				const rgChild = spawn(rgPath, rgArgs, {
-					stdio: ["ignore", "pipe", "pipe"],
+				// Check if dataset is too large for fzf to handle efficiently
+				const dirInput = dirArray.join("\0") + "\0";
+				const MAX_FZF_INPUT_SIZE = 500000; // 500KB limit
+				const MAX_FZF_ITEMS = 5000; // 5000 items limit
+
+				if (
+					dirInput.length > MAX_FZF_INPUT_SIZE ||
+					dirArray.length > MAX_FZF_ITEMS
+				) {
+					console.log(
+						`rip-add: Dataset too large for fzf (${dirInput.length} chars, ${dirArray.length} items), using basic sorting`
+					);
+					// Fall back to basic sorting for large datasets
+					const directoryItems: DirectoryItem[] = dirArray
+						.map((fullPath) => ({
+							label: path.basename(fullPath),
+							description: fullPath,
+							fullPath: fullPath,
+						}))
+						.sort((a, b) => a.label.localeCompare(b.label));
+					resolve(directoryItems);
+					return;
+				}
+
+				// Use fzf for enhanced sorting/ranking (filter mode)
+				// Using empty filter should return all items with fzf's ranking
+				const fzfArgs = [
+					"--filter",
+					"", // Filter with empty string (should match all)
+					"--read0", // Read null-separated input
+					"--print0", // Use null separator for output
+					"--no-info", // Don't show info line
+					"--no-scrollbar", // Don't show scrollbar
+				];
+				console.log(
+					`rip-add: Running fzf for ranking: ${
+						searchParams.fzfPath
+					} ${fzfArgs.join(" ")}`
+				);
+				console.log(
+					`rip-add: Sending ${dirArray.length} directories (${dirInput.length} chars) to fzf for ranking`
+				);
+				console.log(
+					`rip-add: Sample directories being sent to fzf: ${dirArray
+						.slice(0, 5)
+						.join(", ")}`
+				);
+
+				const fzfChild = spawn(searchParams.fzfPath, fzfArgs, {
+					stdio: ["pipe", "pipe", "pipe"],
 				});
 
-				let rgOutput = "";
-				let rgError = "";
+				let fzfOutput = "";
+				let fzfError = "";
 
-				rgChild.stdout?.on("data", (data) => {
-					rgOutput += data.toString();
+				// Send directory list to fzf stdin
+				console.log(
+					`rip-add: Sending ${dirInput.length} characters to fzf stdin`
+				);
+				fzfChild.stdin?.write(dirInput);
+				fzfChild.stdin?.end();
+
+				fzfChild.stdout?.on("data", (data) => {
+					fzfOutput += data.toString();
 				});
 
-				rgChild.stderr?.on("data", (data) => {
-					rgError += data.toString();
+				fzfChild.stderr?.on("data", (data) => {
+					fzfError += data.toString();
 				});
 
 				// Handle cancellation
 				token.onCancellationRequested(() => {
-					rgChild.kill();
+					fzfChild.kill();
 					reject(new Error("Search was cancelled"));
 				});
 
-				rgChild.on("close", async (rgCode) => {
+				fzfChild.on("close", (fzfCode) => {
 					try {
 						if (token.isCancellationRequested) {
 							reject(new Error("Search was cancelled"));
 							return;
 						}
 
-						if (rgCode !== 0 && rgCode !== 1) {
-							console.error(`fd-palette: ripgrep stderr: ${rgError}`);
-							reject(new Error(`ripgrep failed with code ${rgCode}: ${rgError}`));
-							return;
-						}
-
-						// Extract unique directories from ripgrep output
-						const directories = new Set<string>();
-						const lines = rgOutput.split('\0').filter(line => line.trim());
-
-						for (const filePath of lines) {
-							if (filePath.trim()) {
-								const dirPath = path.dirname(filePath);
-								directories.add(dirPath);
-							}
-						}
-
-						// Convert to array and prepare for fzf sorting
-						const dirArray = Array.from(directories)
-							.filter(dir => {
-								const dirName = path.basename(dir);
-								return !dirName.startsWith('.') || ConfigurationManager.shouldExcludeHomeDotFolders() === false;
-							})
-							.sort();
-
-						if (dirArray.length === 0) {
-							resolve([]);
-							return;
-						}
-
-						// Use fzf for enhanced sorting/ranking (non-interactive mode)
-						// We'll pass all directories through fzf to get better ranking
-						const fzfArgs = [
-							"--filter", "", // Non-interactive mode with empty filter (returns all items with fzf ranking)
-							"--no-info", // Don't show info line
-							"--no-scrollbar", // Don't show scrollbar
-							"--print0", // Use null separator for output
-						];
-
-						console.log(`fd-palette: Running fzf for ranking: ${searchParams.fzfPath} ${fzfArgs.join(" ")}`);
-
-						const fzfChild = spawn(searchParams.fzfPath, fzfArgs, {
-							stdio: ["pipe", "pipe", "pipe"],
-						});
-
-						let fzfOutput = "";
-						let fzfError = "";
-
-						fzfChild.stdout?.on("data", (data) => {
-							fzfOutput += data.toString();
-						});
-
-						fzfChild.stderr?.on("data", (data) => {
-							fzfError += data.toString();
-						});
-
-						// Handle cancellation
-						token.onCancellationRequested(() => {
-							fzfChild.kill();
-							reject(new Error("Search was cancelled"));
-						});
-
-						fzfChild.on("close", (fzfCode) => {
-							try {
-								if (token.isCancellationRequested) {
-									reject(new Error("Search was cancelled"));
-									return;
-								}
-
-								if (fzfCode !== 0) {
-									console.warn(`fd-palette: fzf ranking failed with code ${fzfCode}: ${fzfError}, falling back to basic sorting`);
-									// Fall back to basic alphabetical sorting
-									const directories = dirArray.map(fullPath => ({
-										label: path.basename(fullPath),
-										description: fullPath,
-										fullPath: fullPath,
-									}));
-									resolve(directories);
-									return;
-								}
-
-								// Parse fzf output (should be all directories with fzf's ranking)
-								const rankedDirs = fzfOutput
-									.split('\0')
-									.filter(line => line.trim())
-									.map(fullPath => ({
-										label: path.basename(fullPath),
-										description: fullPath,
-										fullPath: fullPath,
-									}));
-
-								console.log(`fd-palette: fzf ranked ${rankedDirs.length} directories`);
-								resolve(rankedDirs);
-							} catch (error) {
-								console.warn(`fd-palette: Error processing fzf output: ${error}, falling back to basic sorting`);
-								// Fall back to basic sorting
-								const directories = dirArray.map(fullPath => ({
-									label: path.basename(fullPath),
-									description: fullPath,
-									fullPath: fullPath,
-								}));
-								resolve(directories);
-							}
-						});
-
-						fzfChild.on("error", (error) => {
-							console.warn(`fd-palette: Failed to run fzf: ${error.message}, falling back to basic search`);
-							// Fall back to basic sorting
-							const directories = dirArray.map(fullPath => ({
+						if (fzfCode !== 0) {
+							console.warn(
+								`rip-add: fzf ranking failed with code ${fzfCode}: ${fzfError}, falling back to basic sorting`
+							);
+							// Fall back to basic alphabetical sorting
+							const directories = dirArray.map((fullPath) => ({
 								label: path.basename(fullPath),
 								description: fullPath,
 								fullPath: fullPath,
 							}));
 							resolve(directories);
-						});
+							return;
+						}
 
-						// Send directory list to fzf
-						fzfChild.stdin?.write(dirArray.join('\n'));
-						fzfChild.stdin?.end();
+						// Parse fzf output (should be all directories with fzf's ranking)
+						const rankedDirs = fzfOutput
+							.split("\0")
+							.filter((line) => line.trim())
+							.map((fullPath) => ({
+								label: path.basename(fullPath),
+								description: fullPath,
+								fullPath: fullPath,
+							}));
 
+						console.log(`rip-add: fzf ranked ${rankedDirs.length} directories`);
+						resolve(rankedDirs);
 					} catch (error) {
-						reject(error);
+						console.warn(
+							`rip-add: Error processing fzf output: ${error}, falling back to basic sorting`
+						);
+						// Fall back to basic sorting
+						const directories = dirArray.map((fullPath) => ({
+							label: path.basename(fullPath),
+							description: fullPath,
+							fullPath: fullPath,
+						}));
+						resolve(directories);
 					}
 				});
-
-				rgChild.on("error", (error) => {
-					reject(new Error(`Failed to run ripgrep: ${error.message}`));
-				});
-
+				fzfChild.on("error", (error) => {
+					console.warn(
+						`rip-add: Failed to run fzf: ${error.message}, falling back to basic search`
+					);
+					// Invalidate cache since fzf execution failed
+					this.invalidateFzfCache(searchParams.fzfPath);
+					// Fall back to basic sorting
+					const directories = dirArray.map((fullPath) => ({
+						label: path.basename(fullPath),
+						description: fullPath,
+						fullPath: fullPath,
+					}));
+					resolve(directories);
+				}); // Send directory list to fzf
+				fzfChild.stdin?.write(dirInput);
+				fzfChild.stdin?.end();
 			} catch (error) {
 				reject(error);
 			}

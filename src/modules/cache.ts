@@ -21,7 +21,7 @@ export class CacheManager {
 		try {
 			this.getCacheDir();
 		} catch (error) {
-			console.warn("fd-palette: Failed to initialize cache directory:", error);
+			console.warn("rip-add: Failed to initialize cache directory:", error);
 		}
 	}
 	private getCacheDir(): string {
@@ -49,10 +49,10 @@ export class CacheManager {
 		} catch (error) {
 			// Fallback to temp directory if globalStorage is not available
 			console.warn(
-				"fd-palette: Could not use globalStorage, falling back to temp directory:",
+				"rip-add: Could not use globalStorage, falling back to temp directory:",
 				error
 			);
-			const fallbackDir = path.join(os.tmpdir(), "fd-palette-cache");
+			const fallbackDir = path.join(os.tmpdir(), "rip-add-cache");
 			if (!fs.existsSync(fallbackDir)) {
 				fs.mkdirSync(fallbackDir, { recursive: true });
 			}
@@ -71,7 +71,6 @@ export class CacheManager {
 		const { searchPath, maxDepth, excludePatterns } = searchParams;
 		return JSON.stringify({ searchPath, maxDepth, excludePatterns });
 	}
-
 	cleanupOldCacheFiles(): void {
 		try {
 			const cacheDir = this.getCacheDir();
@@ -81,6 +80,7 @@ export class CacheManager {
 
 			const files = fs.readdirSync(cacheDir);
 			const cacheDuration = ConfigurationManager.getCacheDuration();
+			const maxAge = cacheDuration * 10; // Only cleanup cache 10x older than normal duration
 			const now = Date.now();
 
 			files.forEach((file) => {
@@ -91,8 +91,8 @@ export class CacheManager {
 						const fileContent = fs.readFileSync(filePath, "utf8");
 						const entry = JSON.parse(fileContent) as CacheEntry;
 
-						// Remove if expired or invalid version
-						if (now - entry.timestamp > cacheDuration || entry.version !== 1) {
+						// Remove if very old or invalid version
+						if (now - entry.timestamp > maxAge || entry.version !== 1) {
 							fs.unlinkSync(filePath);
 						}
 					} catch (error) {
@@ -133,7 +133,7 @@ export class CacheManager {
 			// Load from VSCode globalState
 			const globalStateKeys = this.extensionContext.globalState.keys();
 			for (const key of globalStateKeys) {
-				if (key.startsWith("fd-palette-cache-")) {
+				if (key.startsWith("rip-add-cache-")) {
 					const entry = this.extensionContext.globalState.get<CacheEntry>(key);
 					if (entry && entry.version === 1) {
 						this.memoryCache.set(entry.searchParams, entry);
@@ -169,7 +169,7 @@ export class CacheManager {
 	}
 	getCachedDirectories(searchParams: SearchParams): DirectoryItem[] | null {
 		if (!ConfigurationManager.isCacheEnabled()) {
-			console.log("fd-palette: Cache disabled, returning null");
+			console.log("rip-add: Cache disabled, returning null");
 			return null;
 		}
 
@@ -178,45 +178,35 @@ export class CacheManager {
 
 		if (!entry) {
 			console.log(
-				"fd-palette: Cache MISS - no entry found for key:",
+				"rip-add: Cache MISS - no entry found for key:",
 				cacheKey.substring(0, 50) + "..."
 			);
 			return null;
 		}
 
 		// Check if cache is expired
-		const isExpired =
-			Date.now() - entry.timestamp > ConfigurationManager.getCacheDuration();
+		const age = Date.now() - entry.timestamp;
+		const maxAge = ConfigurationManager.getCacheDuration();
+		const isExpired = age > maxAge;
 
 		if (isExpired) {
 			console.log(
-				"fd-palette: Cache MISS - entry expired, removing from all storage"
+				`rip-add: Cache EXPIRED (${Math.round(
+					age / 1000 / 60
+				)}min old) - using stale cache, will refresh in background`
 			);
-			// Remove expired entry from all storage
-			this.memoryCache.delete(cacheKey);
-			const hash = crypto.createHash("sha256").update(cacheKey).digest("hex");
-			const diskCacheKey = `fd-palette-cache-${hash.substring(0, 16)}`;
-			this.extensionContext.globalState.update(diskCacheKey, undefined);
-			try {
-				const cacheFilePath = this.getCacheFilePath(cacheKey);
-				if (fs.existsSync(cacheFilePath)) {
-					fs.unlinkSync(cacheFilePath);
-				}
-			} catch (error) {
-				console.error("Error removing expired file cache:", error);
-			}
-			return null;
+		} else {
+			console.log(
+				`rip-add: Cache HIT - returning ${entry.directories.length} directories from memory cache`
+			);
 		}
 
-		console.log(
-			`fd-palette: Cache HIT - returning ${entry.directories.length} directories from memory cache`
-		);
 		return entry.directories;
 	}
-
 	/**
-	 * Get cached directories with background refresh capability.
-	 * Returns cached data immediately if available, and optionally triggers background refresh.
+	 * Get cached directories with automatic background refresh for expired cache.
+	 * Returns cached data immediately if available, and automatically triggers
+	 * background refresh if cache is expired.
 	 */
 	getCachedDirectoriesWithRefresh(
 		searchParams: SearchParams,
@@ -229,9 +219,9 @@ export class CacheManager {
 			triggerBackgroundRefresh &&
 			ConfigurationManager.isBackgroundRefreshEnabled()
 		) {
-			// Check if we should refresh in background
+			// Automatically refresh if cache is expired
 			if (this.shouldRefreshInBackground(searchParams)) {
-				console.log("fd-palette: Triggering background cache refresh");
+				console.log("rip-add: Cache expired - triggering background refresh");
 				this.triggerBackgroundRefresh(searchParams);
 			}
 		}
@@ -240,6 +230,7 @@ export class CacheManager {
 	}
 	/**
 	 * Determines if cache should be refreshed in background
+	 * Now simply checks if cache is expired
 	 */
 	private shouldRefreshInBackground(searchParams: SearchParams): boolean {
 		const cacheKey = this.getCacheKey(searchParams);
@@ -254,13 +245,11 @@ export class CacheManager {
 			return false;
 		}
 
-		// Refresh if cache is older than the configured threshold
+		// Refresh if cache is expired (age > cache duration)
 		const age = Date.now() - entry.timestamp;
 		const maxAge = ConfigurationManager.getCacheDuration();
-		const refreshThreshold =
-			maxAge * ConfigurationManager.getBackgroundRefreshThreshold();
 
-		return age > refreshThreshold;
+		return age > maxAge;
 	}
 
 	/**
@@ -296,7 +285,7 @@ export class CacheManager {
 		}
 
 		console.log(
-			"fd-palette: Starting background cache refresh for:",
+			"rip-add: Starting background cache refresh for:",
 			cacheKey.substring(0, 50) + "..."
 		);
 
@@ -305,11 +294,9 @@ export class CacheManager {
 
 		try {
 			await refreshPromise;
-			console.log(
-				"fd-palette: Background cache refresh completed successfully"
-			);
+			console.log("rip-add: Background cache refresh completed successfully");
 		} catch (error) {
-			console.error("fd-palette: Background cache refresh failed:", error);
+			console.error("rip-add: Background cache refresh failed:", error);
 		} finally {
 			this.backgroundRefreshes.delete(cacheKey);
 		}
@@ -363,7 +350,7 @@ export class CacheManager {
 
 				const searchMethod = useFzf ? "ripgrep + fzf" : "ripgrep";
 				console.log(
-					`fd-palette: Background refresh completed using ${searchMethod} - cached ${directories.length} directories`
+					`rip-add: Background refresh completed using ${searchMethod} - cached ${directories.length} directories`
 				);
 			} finally {
 				clearTimeout(timeout);
@@ -371,7 +358,7 @@ export class CacheManager {
 			}
 		} catch (error) {
 			// Don't throw - background refresh failures shouldn't affect the user
-			console.warn("fd-palette: Background refresh failed:", error);
+			console.warn("rip-add: Background refresh failed:", error);
 		}
 	}
 
@@ -399,32 +386,32 @@ export class CacheManager {
 		if (useGlobalState) {
 			const globalStateStartTime = Date.now();
 			const hash = crypto.createHash("sha256").update(cacheKey).digest("hex");
-			const diskCacheKey = `fd-palette-cache-${hash.substring(0, 16)}`;
+			const diskCacheKey = `rip-add-cache-${hash.substring(0, 16)}`;
 			await this.extensionContext.globalState.update(diskCacheKey, entry);
 			console.log(
-				`fd-palette: GlobalState cache took ${
+				`rip-add: GlobalState cache took ${
 					Date.now() - globalStateStartTime
 				}ms for ${directories.length} entries`
 			);
 		} else {
 			console.log(
-				`fd-palette: Skipping globalState cache for large dataset (${directories.length} entries), using file cache only`
+				`rip-add: Skipping globalState cache for large dataset (${directories.length} entries), using file cache only`
 			);
 		} // Store in file-based cache for persistence across extension reloads
 		if (!this.fileCacheDisabled) {
 			// Get fresh cache directory path and ensure it exists
 			const cacheDir = this.getCacheDir();
-			console.log("fd-palette: About to write cache file, cacheDir:", cacheDir);
+			console.log("rip-add: About to write cache file, cacheDir:", cacheDir);
 
 			try {
 				// Triple-check that the directory exists before getting the file path
 				if (!fs.existsSync(cacheDir)) {
 					console.log(
-						"fd-palette: Cache directory missing, recreating:",
+						"rip-add: Cache directory missing, recreating:",
 						cacheDir
 					);
 					fs.mkdirSync(cacheDir, { recursive: true });
-					console.log("fd-palette: Directory created successfully");
+					console.log("rip-add: Directory created successfully");
 				}
 
 				// Verify directory exists after creation attempt
@@ -432,17 +419,14 @@ export class CacheManager {
 					throw new Error(`Failed to create cache directory: ${cacheDir}`);
 				}
 				const cacheFilePath = this.getCacheFilePath(cacheKey, cacheDir);
-				console.log("fd-palette: Writing to cache file:", cacheFilePath);
-				console.log(
-					"fd-palette: Cache file path length:",
-					cacheFilePath.length
-				);
+				console.log("rip-add: Writing to cache file:", cacheFilePath);
+				console.log("rip-add: Cache file path length:", cacheFilePath.length);
 
 				// Ensure parent directory of cache file exists (should be same as cacheDir)
 				const parentDir = path.dirname(cacheFilePath);
 				if (!fs.existsSync(parentDir)) {
 					console.log(
-						"fd-palette: Parent directory missing, creating:",
+						"rip-add: Parent directory missing, creating:",
 						parentDir
 					);
 					fs.mkdirSync(parentDir, { recursive: true });
@@ -451,33 +435,30 @@ export class CacheManager {
 				// Additional diagnostic: check if the path is too long (Windows limitation)
 				if (process.platform === "win32" && cacheFilePath.length > 260) {
 					console.warn(
-						`fd-palette: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
+						`rip-add: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
 					);
 				}
 
 				fs.writeFileSync(cacheFilePath, JSON.stringify(entry), "utf8");
-				console.log(
-					"fd-palette: Successfully wrote cache file:",
-					cacheFilePath
-				);
+				console.log("rip-add: Successfully wrote cache file:", cacheFilePath);
 			} catch (error: any) {
 				console.error("Error writing file cache:", error);
 				console.error(
-					"fd-palette: Error details - code:",
+					"rip-add: Error details - code:",
 					error.code,
 					"message:",
 					error.message
 				);
 				console.error(
-					"fd-palette: Cache directory exists:",
+					"rip-add: Cache directory exists:",
 					fs.existsSync(cacheDir)
 				);
 				console.error(
-					"fd-palette: Attempted file path:",
+					"rip-add: Attempted file path:",
 					this.getCacheFilePath(cacheKey, cacheDir)
 				);
 				console.warn(
-					"fd-palette: Disabling file cache due to persistent errors. Memory and globalState cache will continue to work."
+					"rip-add: Disabling file cache due to persistent errors. Memory and globalState cache will continue to work."
 				);
 				this.fileCacheDisabled = true;
 			}
@@ -490,7 +471,7 @@ export class CacheManager {
 
 		// Clear VSCode globalState cache
 		this.extensionContext.globalState.keys().forEach((key) => {
-			if (key.startsWith("fd-palette-cache-")) {
+			if (key.startsWith("rip-add-cache-")) {
 				this.extensionContext.globalState.update(key, undefined);
 			}
 		});
@@ -526,7 +507,7 @@ export class CacheManager {
 		// Count VS Code globalState entries
 		const diskEntries = this.extensionContext.globalState
 			.keys()
-			.filter((key) => key.startsWith("fd-palette-cache-")).length;
+			.filter((key) => key.startsWith("rip-add-cache-")).length;
 
 		// Count file entries
 		let fileEntries = 0;
@@ -555,7 +536,7 @@ export class CacheManager {
 
 		// Note: We don't cancel ongoing background refreshes as they should complete on their own
 		console.log(
-			"fd-palette: CacheManager disposed, cleared all pending refresh timers"
+			"rip-add: CacheManager disposed, cleared all pending refresh timers"
 		);
 	}
 }

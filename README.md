@@ -1,70 +1,69 @@
-# fd Palette
+# Rip Add
 
-A VSCode extension that leverages the `fd` command-line tool to search for directories system-wide and easily add them to your workspace.
+Quick directory search and workspace management using ripgrep and fzf.
 
 ## Features
 
-- **System-wide directory search**: Search for directories across your entire system using the fast `fd` tool.
-- **Quick Pick interface**: Select multiple directories using VSCode's built-in QuickPick interface.
-- **Configurable search**: Customize search depth, exclude patterns, and search paths.
-- **Workspace integration**: Automatically add selected directories to your current workspace.
+- **Fast directory discovery**: Uses ripgrep to find directories across specified search paths.
+- **Intelligent caching**: Results cached for 2 minutes with automatic background refresh.
+- **Enhanced fuzzy matching**: Optional fzf integration for superior search quality.
+- **Multi-path search**: Search across multiple root directories simultaneously.
+- **Workspace integration**: Add directories to workspace or open in new window.
 
-### Usage
+## Search Interface
 
-1. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
-2. Run the command "Search Directories with fd".
-3. Browse through the found directories.
-4. Select one or more directories (use `Ctrl+Click` for multiple selection).
-5. Press Enter to add them to your workspace.
+When fzf is available and actively filtering, visual indicators show match quality:
+
+- `★` - Excellent fuzzy matches (top 10% of results).
+- `•` - Good matches (top 30% of results).
+- `·` - Fair matches (top 70% of results).
+- Standard VS Code letter highlighting for basic matches.
+
+Large datasets automatically use VS Code's built-in fuzzy matching without quality indicators.
 
 ## Requirements
 
-This extension requires the `fd` command-line tool to be installed on your system:
+- **ripgrep**: Bundled with VS Code (auto-detected) or install separately.
+- **fzf** (optional): Enhanced fuzzy matching and ranking.
 
-- **Windows**: `winget install sharkdp.fd` or `choco install fd`
-- **macOS**: `brew install fd`
-- **Linux**: `sudo apt install fd-find` (Ubuntu/Debian) or package manager equivalent.
+## Configuration
 
-## Extension Settings
-
-This extension contributes the following settings:
-
-* `fdPalette.searchPath`: Default search path for fd (leave empty to search from root).
-* `fdPalette.maxDepth`: Maximum search depth for fd (default: 5).
-* `fdPalette.excludePatterns`: Patterns to exclude from search (default includes common build/cache directories).
-* `fdPalette.fdPath`: Path to fd executable (default: "fd", assumes it's in PATH).
-
-## Configuration Example
-
+### Search Paths
 ```json
 {
-    "fdPalette.searchPath": "/home/user/projects",
-    "fdPalette.maxDepth": 3,
-    "fdPalette.excludePatterns": [
-        "node_modules",
-        ".git",
-        ".vscode",
-        "target",
-        "build",
-        "dist"
-    ],
-    "fdPalette.fdPath": "fd"
+    "ripAdd.searchPath": ["C:\\Users\\username", "/home/user/projects"]
 }
 ```
 
-## Known Issues
+### Performance Tuning
+```json
+{
+    "ripAdd.maxDepth": 10,
+    "ripAdd.cacheDurationMinutes": 2,
+    "ripAdd.enableBackgroundRefresh": true
+}
+```
 
-- The extension requires `fd` to be installed and accessible in your system PATH.
-- Very large directory trees may take some time to search.
+### Tool Paths
+```json
+{
+    "ripAdd.ripgrepPath": "auto",  // auto-detect or specify path
+    "ripAdd.fzfPath": "fzf",       // assumes fzf in PATH
+    "ripAdd.enableFzf": true
+}
+```
 
-## Development
+## Commands
 
-To contribute to this extension:
+| Command | Default Keybinding | Description |
+|---------|-------------------|-------------|
+| `Rip Add: Add Directories to Workspace` | `Ctrl+Alt+D` | Search and add to workspace |
+| `Rip Add: Open Directory in New Window` | `Ctrl+Alt+Shift+D` | Search and open in new window |
+| `Rip Add: Clear Search Cache` | - | Force cache refresh 
 
-1. Clone the repository.
-2. Run `pnpm install` to install dependencies.
-3. Press `F5` to start debugging the extension in a new Extension Development Host window.
-4. Make your changes and test them.
-5. Submit a pull request.
+## Performance Notes
 
-For more information about developing VSCode extensions, see the [Extension API documentation](https://code.visualstudio.com/api).
+- Large datasets (>5000 directories) automatically fallback to basic sorting.
+- fzf is called in automatically when the amount of results shrinks.
+- Background cache refresh maintains responsiveness for subsequent searches.
+- Memory and file-based caching optimize repeated searches.
