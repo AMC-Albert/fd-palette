@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { CacheEntry, DirectoryItem, SearchParams, CachedResult } from './types';
+import { CacheEntry, DirectoryItem, SearchParams } from './types';
 import { ConfigurationManager } from './configuration';
 
 export class CacheManager {
@@ -203,11 +203,8 @@ export class CacheManager {
 						fs.unlinkSync(path.join(cacheDir, file));
 					}
 				});
-			}
-		} catch (error) {
+			}		} catch (error) {
 			console.error('Error clearing file cache:', error);
 		}
-		
-		vscode.window.showInformationMessage(`Cleared ${memoryCacheSize} cached search results from memory, disk, and files.`);
 	}
 }

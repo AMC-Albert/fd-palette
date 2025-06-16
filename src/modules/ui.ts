@@ -1,22 +1,20 @@
 import * as vscode from 'vscode';
-import { DirectoryItem, CacheSource } from './types';
+import { DirectoryItem } from './types';
 import { WorkspaceManager } from './workspace';
 
 export class DirectoryPicker {
-	static async showDirectoryPicker(directories: DirectoryItem[], cacheSource?: CacheSource): Promise<void> {
+	static async showDirectoryPicker(directories: DirectoryItem[]): Promise<void> {
 		const quickPick = vscode.window.createQuickPick<DirectoryItem>();
 		quickPick.items = directories;
 		quickPick.canSelectMany = true;
 		quickPick.matchOnDescription = true;
-		
-		// Set up dynamic placeholder
+				// Set up dynamic placeholder
 		const updatePlaceholder = () => {
 			const searchTerm = quickPick.value.trim();
-			const cacheInfo = cacheSource ? ` (${cacheSource} cache)` : '';
 			if (searchTerm === '') {
-				quickPick.placeholder = `Search ${directories.length} directories${cacheInfo} (type to filter, Enter to add)`;
+				quickPick.placeholder = `Search ${directories.length} directories (type to filter, Enter to add)`;
 			} else {
-				quickPick.placeholder = `Filtered results${cacheInfo} (Enter to add highlighted, Space for multiple)`;
+				quickPick.placeholder = `Filtered results (Enter to add highlighted, Space for multiple)`;
 			}
 		};
 

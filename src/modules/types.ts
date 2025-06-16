@@ -11,16 +11,8 @@ export interface CacheEntry {
 	version: number;
 }
 
-export interface SearchParams {
-	searchPath: string;
+export interface SearchParams {	searchPath: string;
 	maxDepth: number;
 	excludePatterns: string[];
 	fdPath: string;
-}
-
-export type CacheSource = 'memory' | 'disk' | 'file';
-
-export interface CachedResult {
-	directories: DirectoryItem[];
-	source: CacheSource;
 }

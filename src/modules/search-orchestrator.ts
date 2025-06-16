@@ -8,13 +8,10 @@ export class SearchOrchestrator {
 	constructor(private cacheManager: CacheManager) {}
 
 	async searchAndAddDirectories(): Promise<void> {
-		const searchParams = ConfigurationManager.getSearchParams();
-
-		// Check cache first
+		const searchParams = ConfigurationManager.getSearchParams();		// Check cache first
 		const cachedDirectories = this.cacheManager.getCachedDirectories(searchParams);
 		if (cachedDirectories) {
-			vscode.window.showInformationMessage(`Using cached results (${cachedDirectories.length} directories)`);
-			await DirectoryPicker.showDirectoryPicker(cachedDirectories, 'memory');
+			await DirectoryPicker.showDirectoryPicker(cachedDirectories);
 			return;
 		}
 
