@@ -32,7 +32,7 @@ export class SearchOrchestrator {
 		);
 		if (cachedDirectories) {
 			console.log(
-				`rip-add: Using cached results (${cachedDirectories.length} directories) - background refresh may be triggered`
+				`rip-open: Using cached results (${cachedDirectories.length} directories) - background refresh may be triggered`
 			);
 			await DirectoryPicker.showDirectoryPicker(
 				cachedDirectories,
@@ -42,13 +42,13 @@ export class SearchOrchestrator {
 			return;
 		}
 
-		console.log("rip-add: No cached results found, performing fresh search");
+		console.log("rip-open: No cached results found, performing fresh search");
 
 		// Check if ripgrep is available
 		let rgPath: string;
 		try {
 			rgPath = await DirectorySearcher.checkRipgrepAvailability();
-			console.log(`rip-add: Using ripgrep at: ${rgPath}`);
+			console.log(`rip-open: Using ripgrep at: ${rgPath}`);
 		} catch (error) {
 			vscode.window.showErrorMessage(`ripgrep is not available: ${error}`);
 			return;
@@ -61,10 +61,10 @@ export class SearchOrchestrator {
 				await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
 				useFzf = true;
 				console.log(
-					"rip-add: fzf is available, will use enhanced ripgrep + fzf search"
+					"rip-open: fzf is available, will use enhanced ripgrep + fzf search"
 				);
 			} catch (error) {
-				console.log("rip-add: fzf not available, using basic ripgrep search");
+				console.log("rip-open: fzf not available, using basic ripgrep search");
 				useFzf = false;
 			}
 		}

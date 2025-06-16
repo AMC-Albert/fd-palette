@@ -1,4 +1,4 @@
-# Rip Add
+# Rip Open
 
 Quick directory search and workspace management using [ripgrep](https://github.com/BurntSushi/ripgrep) and [fzf](https://github.com/junegunn/fzf).
 
@@ -31,25 +31,25 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 ### Search Paths
 ```json
 {
-    "ripAdd.searchPath": ["C:\\Users\\username", "/home/user/projects"]
+    "ripOpen.searchPath": ["C:\\Users\\username", "/home/user/projects"]
 }
 ```
 
 ### Performance Tuning
 ```json
 {
-    "ripAdd.maxDepth": 10,
-    "ripAdd.cacheDurationMinutes": 2,
-    "ripAdd.enableBackgroundRefresh": true
+    "ripOpen.maxDepth": 10,
+    "ripOpen.cacheDurationMinutes": 2,
+    "ripOpen.enableBackgroundRefresh": true
 }
 ```
 
 ### Tool Paths
 ```json
 {
-    "ripAdd.ripgrepPath": "auto",  // auto-detect or specify path
-    "ripAdd.fzfPath": "fzf",       // assumes fzf in PATH
-    "ripAdd.enableFzf": true
+    "ripOpen.ripgrepPath": "auto",  // auto-detect or specify path
+    "ripOpen.fzfPath": "fzf",       // assumes fzf in PATH
+    "ripOpen.enableFzf": true
 }
 ```
 
@@ -57,10 +57,10 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 
 | Command | Default Keybinding | Description |
 |---------|-------------------|-------------|
-| `Rip Add: Add Directories to Workspace` | `Ctrl+Alt+D` | Search and add to workspace |
-| `Rip Add: Open Directory in Current Window` | `Ctrl+Alt+O` | Search and open in current window |
-| `Rip Add: Open Directory in New Window` | `Ctrl+Alt+Shift+O` | Search and open in new window |
-| `Rip Add: Clear Search Cache` | - | Force cache refresh |
+| `Rip Open: Add Directories to Workspace` | `Ctrl+Alt+D` | Search and add to workspace |
+| `Rip Open: Open Directory in Current Window` | `Ctrl+Alt+O` | Search and open in current window |
+| `Rip Open: Open Directory in New Window` | `Ctrl+Alt+Shift+O` | Search and open in new window |
+| `Rip Open: Clear Search Cache` | - | Force cache refresh |
 
 ## Performance Notes
 

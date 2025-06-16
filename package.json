@@ -1,13 +1,13 @@
 {
-	"name": "rip-add",
+	"name": "rip-open",
 	"author": "Albert O'Shea",
-	"publisher": "rip-add-dev",
-	"displayName": "Rip Add",
-	"description": "Quick directory search and workspace management using ripgrep and fzf",
+	"publisher": "rip-open-dev",
+	"displayName": "Rip Open",
+	"description": "System-wide directory search and workspace management using ripgrep and fzf.",
 	"version": "0.5.1",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/AMC-Albert/rip-add"
+		"url": "https://github.com/AMC-Albert/rip-open"
 	},
 	"engines": {
 		"vscode": "^1.90.0"
@@ -28,52 +28,52 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "rip-add.addToWorkspace",
+				"command": "rip-open.addToWorkspace",
 				"title": "Add Directories to Workspace",
-				"category": "Rip Add"
+				"category": "Rip Open"
 			},
 			{
-				"command": "rip-add.openInCurrentWindow",
+				"command": "rip-open.openInCurrentWindow",
 				"title": "Open Directory in Current Window",
-				"category": "Rip Add"
+				"category": "Rip Open"
 			},
 			{
-				"command": "rip-add.openInNewWindow",
+				"command": "rip-open.openInNewWindow",
 				"title": "Open Directory in New Window",
-				"category": "Rip Add"
+				"category": "Rip Open"
 			},
 			{
-				"command": "rip-add.clearCache",
+				"command": "rip-open.clearCache",
 				"title": "Clear Search Cache",
-				"category": "Rip Add"
+				"category": "Rip Open"
 			},
 			{
-				"command": "rip-add.resetSettings",
+				"command": "rip-open.resetSettings",
 				"title": "Reset Settings to Default",
-				"category": "Rip Add"
+				"category": "Rip Open"
 			}
 		],
 		"keybindings": [
 			{
-				"command": "rip-add.addToWorkspace",
+				"command": "rip-open.addToWorkspace",
 				"key": "ctrl+alt+d",
 				"mac": "cmd+alt+d"
 			},
 			{
-				"command": "rip-add.openInCurrentWindow",
+				"command": "rip-open.openInCurrentWindow",
 				"key": "ctrl+alt+o",
 				"mac": "cmd+alt+o"
 			},
 			{
-				"command": "rip-add.openInNewWindow",
+				"command": "rip-open.openInNewWindow",
 				"key": "ctrl+alt+shift+o",
 				"mac": "cmd+alt+shift+o"
 			}
 		],
 		"configuration": {
-			"title": "Rip Add",
+			"title": "Rip Open",
 			"properties": {
-				"ripAdd.searchPath": {
+				"ripOpen.searchPath": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -81,12 +81,12 @@
 					"default": [],
 					"description": "List of search paths for directory search - first valid directory wins (leave empty to search from root)"
 				},
-				"ripAdd.maxDepth": {
+				"ripOpen.maxDepth": {
 					"type": "number",
 					"default": 10,
 					"description": "Maximum search depth for ripgrep"
 				},
-				"ripAdd.excludePatterns": {
+				"ripOpen.excludePatterns": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -164,47 +164,47 @@
 					],
 					"description": "Patterns to exclude from search (default includes common build/cache directories)"
 				},
-				"ripAdd.ripgrepPath": {
+				"ripOpen.ripgrepPath": {
 					"type": "string",
 					"default": "auto",
 					"description": "Path to ripgrep executable (use 'auto' for automatic detection, 'rg' if in PATH, or specify full path)"
 				},
-				"ripAdd.fzfPath": {
+				"ripOpen.fzfPath": {
 					"type": "string",
 					"default": "fzf",
 					"description": "Path to fzf executable (use 'fzf' if in PATH)"
 				},
-				"ripAdd.enableFzf": {
+				"ripOpen.enableFzf": {
 					"type": "boolean",
 					"default": true,
 					"description": "Enable fzf integration for improved fuzzy matching when available"
 				},
-				"ripAdd.fzfOptions": {
+				"ripOpen.fzfOptions": {
 					"type": "string",
 					"default": "--height=60% --layout=reverse --border --info=inline --cycle",
 					"description": "Additional options to pass to fzf for enhanced fuzzy matching"
 				},
-				"ripAdd.enableCache": {
+				"ripOpen.enableCache": {
 					"type": "boolean",
 					"default": true,
 					"description": "Enable caching of search results for faster subsequent searches"
 				},
-				"ripAdd.cacheDurationMinutes": {
+				"ripOpen.cacheDurationMinutes": {
 					"type": "number",
 					"default": 2,
 					"description": "Cache duration in minutes before results are considered stale"
 				},
-				"ripAdd.enableBackgroundRefresh": {
+				"ripOpen.enableBackgroundRefresh": {
 					"type": "boolean",
 					"default": true,
 					"description": "Enable background cache refresh for better performance (automatically refreshes expired cache in background)"
 				},
-				"ripAdd.openInWindow": {
+				"ripOpen.openInWindow": {
 					"type": "boolean",
 					"default": true,
 					"description": "Whether to open directories in a new window by default"
 				},
-				"ripAdd.uiDisplayLimit": {
+				"ripOpen.uiDisplayLimit": {
 					"type": "number",
 					"default": 100,
 					"description": "Maximum number of items to display in the UI before requiring filtering"

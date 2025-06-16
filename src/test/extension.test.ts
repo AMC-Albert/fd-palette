@@ -1,19 +1,20 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 
-suite("rip-add Extension Test Suite", () => {
+suite("rip-open Extension Test Suite", () => {
 	vscode.window.showInformationMessage("Start all tests.");
 
 	test("Extension should be present", () => {
 		const extension = vscode.extensions.getExtension(
-			"undefined_publisher.rip-add"
+			"undefined_publisher.rip-open"
 		);
 		assert.ok(extension);
 	});
 	test("Commands should be registered", async () => {
-		const commands = await vscode.commands.getCommands(true);		assert.ok(commands.includes("rip-add.addToWorkspace"));
-		assert.ok(commands.includes("rip-add.openInWindow"));
-		assert.ok(commands.includes("rip-add.clearCache"));
-		assert.ok(commands.includes("rip-add.resetSettings"));
+		const commands = await vscode.commands.getCommands(true);
+		assert.ok(commands.includes("rip-open.addToWorkspace"));
+		assert.ok(commands.includes("rip-open.openInWindow"));
+		assert.ok(commands.includes("rip-open.clearCache"));
+		assert.ok(commands.includes("rip-open.resetSettings"));
 	});
 });

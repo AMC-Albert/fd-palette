@@ -4,7 +4,7 @@ import * as path from "path";
 import { SearchParams } from "./types";
 
 export class ConfigurationManager {
-	private static readonly CONFIG_SECTION = "ripAdd";
+	private static readonly CONFIG_SECTION = "ripOpen";
 	private static readonly PATH_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 	private static _extensionContext: vscode.ExtensionContext | undefined;
 
@@ -54,19 +54,19 @@ export class ConfigurationManager {
 				}
 			} catch (error) {
 				// Log but don't throw - continue checking other paths
-				console.warn(`rip-add: Invalid search path '${searchPath}': ${error}`);
+				console.warn(`rip-open: Invalid search path '${searchPath}': ${error}`);
 			}
 		}
 
 		if (validPaths.length === 0) {
 			console.warn(
-				`rip-add: No valid directories found in searchPath: ${searchPaths.join(
+				`rip-open: No valid directories found in searchPath: ${searchPaths.join(
 					", "
 				)}, using root search`
 			);
 		} else {
 			console.log(
-				`rip-add: Found ${
+				`rip-open: Found ${
 					validPaths.length
 				} valid search paths: ${validPaths.join(", ")}`
 			);
@@ -203,14 +203,14 @@ export class ConfigurationManager {
 
 		// Show confirmation dialog
 		const choice = await vscode.window.showWarningMessage(
-			"Are you sure you want to reset all rip-add settings to their default values?",
+			"Are you sure you want to reset all rip-open settings to their default values?",
 			{ modal: true },
 			"Reset Settings",
 			"Cancel"
 		);
 		if (choice !== "Reset Settings") {
 			return;
-		}		// Reset all settings to undefined (which restores defaults)
+		} // Reset all settings to undefined (which restores defaults)
 		const settingsToReset = [
 			"searchPath",
 			"maxDepth",
@@ -231,7 +231,7 @@ export class ConfigurationManager {
 			);
 
 			vscode.window.showInformationMessage(
-				"rip-add settings have been reset to default values."
+				"rip-open settings have been reset to default values."
 			);
 		} catch (error) {
 			vscode.window.showErrorMessage(`Failed to reset settings: ${error}`);

@@ -21,7 +21,7 @@ export class CacheManager {
 		try {
 			this.getCacheDir();
 		} catch (error) {
-			console.warn("rip-add: Failed to initialize cache directory:", error);
+			console.warn("rip-open: Failed to initialize cache directory:", error);
 		}
 	}
 	private getCacheDir(): string {
@@ -49,10 +49,10 @@ export class CacheManager {
 		} catch (error) {
 			// Fallback to temp directory if globalStorage is not available
 			console.warn(
-				"rip-add: Could not use globalStorage, falling back to temp directory:",
+				"rip-open: Could not use globalStorage, falling back to temp directory:",
 				error
 			);
-			const fallbackDir = path.join(os.tmpdir(), "rip-add-cache");
+			const fallbackDir = path.join(os.tmpdir(), "rip-open-cache");
 			if (!fs.existsSync(fallbackDir)) {
 				fs.mkdirSync(fallbackDir, { recursive: true });
 			}
@@ -133,7 +133,7 @@ export class CacheManager {
 			// Load from VSCode globalState
 			const globalStateKeys = this.extensionContext.globalState.keys();
 			for (const key of globalStateKeys) {
-				if (key.startsWith("rip-add-cache-")) {
+				if (key.startsWith("rip-open-cache-")) {
 					const entry = this.extensionContext.globalState.get<CacheEntry>(key);
 					if (entry && entry.version === 1) {
 						this.memoryCache.set(entry.searchParams, entry);
@@ -169,7 +169,7 @@ export class CacheManager {
 	}
 	getCachedDirectories(searchParams: SearchParams): DirectoryItem[] | null {
 		if (!ConfigurationManager.isCacheEnabled()) {
-			console.log("rip-add: Cache disabled, returning null");
+			console.log("rip-open: Cache disabled, returning null");
 			return null;
 		}
 
@@ -178,7 +178,7 @@ export class CacheManager {
 
 		if (!entry) {
 			console.log(
-				"rip-add: Cache MISS - no entry found for key:",
+				"rip-open: Cache MISS - no entry found for key:",
 				cacheKey.substring(0, 50) + "..."
 			);
 			return null;
@@ -191,13 +191,13 @@ export class CacheManager {
 
 		if (isExpired) {
 			console.log(
-				`rip-add: Cache EXPIRED (${Math.round(
+				`rip-open: Cache EXPIRED (${Math.round(
 					age / 1000 / 60
 				)}min old) - using stale cache, will refresh in background`
 			);
 		} else {
 			console.log(
-				`rip-add: Cache HIT - returning ${entry.directories.length} directories from memory cache`
+				`rip-open: Cache HIT - returning ${entry.directories.length} directories from memory cache`
 			);
 		}
 
@@ -221,7 +221,7 @@ export class CacheManager {
 		) {
 			// Automatically refresh if cache is expired
 			if (this.shouldRefreshInBackground(searchParams)) {
-				console.log("rip-add: Cache expired - triggering background refresh");
+				console.log("rip-open: Cache expired - triggering background refresh");
 				this.triggerBackgroundRefresh(searchParams);
 			}
 		}
@@ -285,7 +285,7 @@ export class CacheManager {
 		}
 
 		console.log(
-			"rip-add: Starting background cache refresh for:",
+			"rip-open: Starting background cache refresh for:",
 			cacheKey.substring(0, 50) + "..."
 		);
 
@@ -294,9 +294,9 @@ export class CacheManager {
 
 		try {
 			await refreshPromise;
-			console.log("rip-add: Background cache refresh completed successfully");
+			console.log("rip-open: Background cache refresh completed successfully");
 		} catch (error) {
-			console.error("rip-add: Background cache refresh failed:", error);
+			console.error("rip-open: Background cache refresh failed:", error);
 		} finally {
 			this.backgroundRefreshes.delete(cacheKey);
 		}
@@ -350,7 +350,7 @@ export class CacheManager {
 
 				const searchMethod = useFzf ? "ripgrep + fzf" : "ripgrep";
 				console.log(
-					`rip-add: Background refresh completed using ${searchMethod} - cached ${directories.length} directories`
+					`rip-open: Background refresh completed using ${searchMethod} - cached ${directories.length} directories`
 				);
 			} finally {
 				clearTimeout(timeout);
@@ -358,7 +358,7 @@ export class CacheManager {
 			}
 		} catch (error) {
 			// Don't throw - background refresh failures shouldn't affect the user
-			console.warn("rip-add: Background refresh failed:", error);
+			console.warn("rip-open: Background refresh failed:", error);
 		}
 	}
 
@@ -386,32 +386,32 @@ export class CacheManager {
 		if (useGlobalState) {
 			const globalStateStartTime = Date.now();
 			const hash = crypto.createHash("sha256").update(cacheKey).digest("hex");
-			const diskCacheKey = `rip-add-cache-${hash.substring(0, 16)}`;
+			const diskCacheKey = `rip-open-cache-${hash.substring(0, 16)}`;
 			await this.extensionContext.globalState.update(diskCacheKey, entry);
 			console.log(
-				`rip-add: GlobalState cache took ${
+				`rip-open: GlobalState cache took ${
 					Date.now() - globalStateStartTime
 				}ms for ${directories.length} entries`
 			);
 		} else {
 			console.log(
-				`rip-add: Skipping globalState cache for large dataset (${directories.length} entries), using file cache only`
+				`rip-open: Skipping globalState cache for large dataset (${directories.length} entries), using file cache only`
 			);
 		} // Store in file-based cache for persistence across extension reloads
 		if (!this.fileCacheDisabled) {
 			// Get fresh cache directory path and ensure it exists
 			const cacheDir = this.getCacheDir();
-			console.log("rip-add: About to write cache file, cacheDir:", cacheDir);
+			console.log("rip-open: About to write cache file, cacheDir:", cacheDir);
 
 			try {
 				// Triple-check that the directory exists before getting the file path
 				if (!fs.existsSync(cacheDir)) {
 					console.log(
-						"rip-add: Cache directory missing, recreating:",
+						"rip-open: Cache directory missing, recreating:",
 						cacheDir
 					);
 					fs.mkdirSync(cacheDir, { recursive: true });
-					console.log("rip-add: Directory created successfully");
+					console.log("rip-open: Directory created successfully");
 				}
 
 				// Verify directory exists after creation attempt
@@ -419,14 +419,14 @@ export class CacheManager {
 					throw new Error(`Failed to create cache directory: ${cacheDir}`);
 				}
 				const cacheFilePath = this.getCacheFilePath(cacheKey, cacheDir);
-				console.log("rip-add: Writing to cache file:", cacheFilePath);
-				console.log("rip-add: Cache file path length:", cacheFilePath.length);
+				console.log("rip-open: Writing to cache file:", cacheFilePath);
+				console.log("rip-open: Cache file path length:", cacheFilePath.length);
 
 				// Ensure parent directory of cache file exists (should be same as cacheDir)
 				const parentDir = path.dirname(cacheFilePath);
 				if (!fs.existsSync(parentDir)) {
 					console.log(
-						"rip-add: Parent directory missing, creating:",
+						"rip-open: Parent directory missing, creating:",
 						parentDir
 					);
 					fs.mkdirSync(parentDir, { recursive: true });
@@ -435,30 +435,30 @@ export class CacheManager {
 				// Additional diagnostic: check if the path is too long (Windows limitation)
 				if (process.platform === "win32" && cacheFilePath.length > 260) {
 					console.warn(
-						`rip-add: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
+						`rip-open: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
 					);
 				}
 
 				fs.writeFileSync(cacheFilePath, JSON.stringify(entry), "utf8");
-				console.log("rip-add: Successfully wrote cache file:", cacheFilePath);
+				console.log("rip-open: Successfully wrote cache file:", cacheFilePath);
 			} catch (error: any) {
 				console.error("Error writing file cache:", error);
 				console.error(
-					"rip-add: Error details - code:",
+					"rip-open: Error details - code:",
 					error.code,
 					"message:",
 					error.message
 				);
 				console.error(
-					"rip-add: Cache directory exists:",
+					"rip-open: Cache directory exists:",
 					fs.existsSync(cacheDir)
 				);
 				console.error(
-					"rip-add: Attempted file path:",
+					"rip-open: Attempted file path:",
 					this.getCacheFilePath(cacheKey, cacheDir)
 				);
 				console.warn(
-					"rip-add: Disabling file cache due to persistent errors. Memory and globalState cache will continue to work."
+					"rip-open: Disabling file cache due to persistent errors. Memory and globalState cache will continue to work."
 				);
 				this.fileCacheDisabled = true;
 			}
@@ -471,7 +471,7 @@ export class CacheManager {
 
 		// Clear VSCode globalState cache
 		this.extensionContext.globalState.keys().forEach((key) => {
-			if (key.startsWith("rip-add-cache-")) {
+			if (key.startsWith("rip-open-cache-")) {
 				this.extensionContext.globalState.update(key, undefined);
 			}
 		});
@@ -507,7 +507,7 @@ export class CacheManager {
 		// Count VS Code globalState entries
 		const diskEntries = this.extensionContext.globalState
 			.keys()
-			.filter((key) => key.startsWith("rip-add-cache-")).length;
+			.filter((key) => key.startsWith("rip-open-cache-")).length;
 
 		// Count file entries
 		let fileEntries = 0;
@@ -536,7 +536,7 @@ export class CacheManager {
 
 		// Note: We don't cancel ongoing background refreshes as they should complete on their own
 		console.log(
-			"rip-add: CacheManager disposed, cleared all pending refresh timers"
+			"rip-open: CacheManager disposed, cleared all pending refresh timers"
 		);
 	}
 }

@@ -10,7 +10,7 @@ let searchOrchestrator: SearchOrchestrator;
 let cacheManager: CacheManager;
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log("rip-add extension is now active!");
+	console.log("rip-open extension is now active!");
 
 	// Set extension context for DirectorySearcher (needed for caching)
 	DirectorySearcher.setExtensionContext(context);
@@ -26,35 +26,35 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register commands
 	const addToWorkspaceCommand = vscode.commands.registerCommand(
-		"rip-add.addToWorkspace",
+		"rip-open.addToWorkspace",
 		async () => {
 			await searchOrchestrator.searchAndAddDirectories();
 		}
 	);
 
 	const openInCurrentWindowCommand = vscode.commands.registerCommand(
-		"rip-add.openInCurrentWindow",
+		"rip-open.openInCurrentWindow",
 		async () => {
 			await searchOrchestrator.searchAndOpenInCurrentWindow();
 		}
 	);
 
 	const openInNewWindowCommand = vscode.commands.registerCommand(
-		"rip-add.openInNewWindow",
+		"rip-open.openInNewWindow",
 		async () => {
 			await searchOrchestrator.searchAndOpenInNewWindow();
 		}
 	);
 
 	const clearCacheCommand = vscode.commands.registerCommand(
-		"rip-add.clearCache",
+		"rip-open.clearCache",
 		async () => {
 			cacheManager.clearCache();
 		}
 	);
 
 	const resetSettingsCommand = vscode.commands.registerCommand(
-		"rip-add.resetSettings",
+		"rip-open.resetSettings",
 		async () => {
 			await ConfigurationManager.resetSettingsToDefault();
 		}
