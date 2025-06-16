@@ -42,6 +42,11 @@
         "category": "fd Palette"
       },
       {
+        "command": "fd-palette.checkFzfInstallation",
+        "title": "Check fzf Installation",
+        "category": "fd Palette"
+      },
+      {
         "command": "fd-palette.clearCache",
         "title": "Clear Search Cache",
         "category": "fd Palette"
@@ -160,6 +165,21 @@
           "type": "string",
           "default": "fd",
           "description": "Path to fd executable (use 'fd' if in PATH)"
+        },
+        "fdPalette.fzfPath": {
+          "type": "string",
+          "default": "fzf",
+          "description": "Path to fzf executable (use 'fzf' if in PATH)"
+        },
+        "fdPalette.enableFzf": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable fzf integration for improved fuzzy matching when available"
+        },
+        "fdPalette.fzfOptions": {
+          "type": "string",
+          "default": "--height=60% --layout=reverse --border --info=inline --cycle",
+          "description": "Additional options to pass to fzf for enhanced fuzzy matching"
         },
         "fdPalette.enableCache": {
           "type": "boolean",

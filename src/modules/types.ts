@@ -15,6 +15,9 @@ export interface SearchParams {	searchPath: string;
 	maxDepth: number;
 	excludePatterns: string[];
 	fdPath: string;
+	fzfPath: string;
+	enableFzf: boolean;
+	fzfOptions: string;
 }
 
 export enum DirectoryAction {

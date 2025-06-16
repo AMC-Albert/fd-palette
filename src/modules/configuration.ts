@@ -3,14 +3,16 @@ import { SearchParams } from './types';
 
 export class ConfigurationManager {
 	private static readonly CONFIG_SECTION = 'fdPalette';
-
 	static getSearchParams(): SearchParams {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return {
 			searchPath: config.get<string>('searchPath') || '',
 			maxDepth: config.get<number>('maxDepth') || 5,
 			excludePatterns: config.get<string[]>('excludePatterns') || [],
-			fdPath: config.get<string>('fdPath') || 'fd'
+			fdPath: config.get<string>('fdPath') || 'fd',
+			fzfPath: config.get<string>('fzfPath') || 'fzf',
+			enableFzf: config.get<boolean>('enableFzf') ?? true,
+			fzfOptions: config.get<string>('fzfOptions') || '--height=60% --layout=reverse --border --info=inline --cycle'
 		};
 	}
 
@@ -35,6 +37,16 @@ export class ConfigurationManager {
 	static getUiDisplayLimit(): number {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return config.get<number>('uiDisplayLimit') ?? 100;
+	}
+
+	static getFzfPath(): string {
+		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+		return config.get<string>('fzfPath') || 'fzf';
+	}
+
+	static isFzfEnabled(): boolean {
+		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+		return config.get<boolean>('enableFzf') ?? true;
 	}
 
 	static async resetSettingsToDefault(): Promise<void> {

@@ -1,11 +1,15 @@
 import * as vscode from 'vscode';
-import { SearchOrchestrator, CacheManager, ConfigurationManager } from './modules';
+import { SearchOrchestrator, CacheManager, ConfigurationManager, DirectorySearcher } from './modules';
 
 let searchOrchestrator: SearchOrchestrator;
 let cacheManager: CacheManager;
 
 export function activate(context: vscode.ExtensionContext) {
 	console.log('fd-palette extension is now active!');
+	
+	// Set extension context for DirectorySearcher (needed for caching)
+	DirectorySearcher.setExtensionContext(context);
+	
 	// Initialize services
 	const configManager = new ConfigurationManager();
 	cacheManager = new CacheManager(context);
@@ -28,7 +32,13 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const checkFdCommand = vscode.commands.registerCommand('fd-palette.checkFdInstallation', async () => {
 		await searchOrchestrator.checkFdInstallation();
-	});	const clearCacheCommand = vscode.commands.registerCommand('fd-palette.clearCache', async () => {
+	});
+	
+	const checkFzfCommand = vscode.commands.registerCommand('fd-palette.checkFzfInstallation', async () => {
+		await searchOrchestrator.checkFzfInstallation();
+	});
+
+	const clearCacheCommand = vscode.commands.registerCommand('fd-palette.clearCache', async () => {
 		cacheManager.clearCache();
 	});
 
@@ -43,7 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
 		await ConfigurationManager.resetSettingsToDefault();
 	});
 
-	context.subscriptions.push(addToWorkspaceCommand, openInWindowCommand, checkFdCommand, clearCacheCommand, showCacheStatusCommand, resetSettingsCommand);
+	context.subscriptions.push(addToWorkspaceCommand, openInWindowCommand, checkFdCommand, checkFzfCommand, clearCacheCommand, showCacheStatusCommand, resetSettingsCommand);
 }
 
 export function deactivate() {

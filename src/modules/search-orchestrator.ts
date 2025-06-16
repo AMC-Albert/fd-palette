@@ -35,7 +35,6 @@ export class SearchOrchestrator {
 		}
 
 		console.log(`fd-palette: Cache miss - took ${cacheTime}ms to check`);
-
 		// First check if fd is available
 		const fdCheckStartTime = Date.now();
 		try {
@@ -46,29 +45,51 @@ export class SearchOrchestrator {
 		}
 		const fdCheckTime = Date.now() - fdCheckStartTime;
 		console.log(`fd-palette: fd availability check took ${fdCheckTime}ms`);
-		// Show a progress indicator while searching
+
+		// Check if fzf is available and enabled
+		let useFzf = false;
+		if (searchParams.enableFzf) {
+			const fzfCheckStartTime = Date.now();
+			try {
+				await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
+				useFzf = true;
+				console.log(`fd-palette: fzf is available and will be used`);
+			} catch (error) {
+				console.log(`fd-palette: fzf is not available, falling back to fd only: ${error}`);
+				useFzf = false;
+			}
+			const fzfCheckTime = Date.now() - fzfCheckStartTime;
+			console.log(`fd-palette: fzf availability check took ${fzfCheckTime}ms`);
+		}		// Show a progress indicator while searching
 		const actionText = action === DirectoryAction.AddToWorkspace ? 'adding to workspace' : 'opening';
+		const searchMethod = useFzf ? 'fd + fzf' : 'fd';
 		const progressStartTime = Date.now();
 		await vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
-			title: `Searching directories with fd for ${actionText}...`,
+			title: `Searching directories with ${searchMethod} for ${actionText}...`,
 			cancellable: true		}, async (progress, token) => {
 			const progressSetupTime = Date.now() - progressStartTime;
 			console.log(`fd-palette: Progress notification setup took ${progressSetupTime}ms`);
 			
 			try {
 				const searchStartTime = Date.now();
-				const directories = await DirectorySearcher.findDirectories(searchParams, token);
+				
+				// Use fzf if available, otherwise fall back to fd only
+				const directories = useFzf 
+					? await DirectorySearcher.findDirectoriesWithFzf(searchParams, token)
+					: await DirectorySearcher.findDirectories(searchParams, token);
+				
 				const searchTime = Date.now() - searchStartTime;
 				
 				if (directories.length === 0) {
-					vscode.window.showInformationMessage('No directories found.');
+					const noResultsMessage = useFzf 
+						? 'No directories selected from fzf search.' 
+						: 'No directories found.';
+					vscode.window.showInformationMessage(noResultsMessage);
 					return;
-				}
+				}				console.log(`fd-palette: ${searchMethod} search found ${directories.length} directories in ${searchTime}ms`);
 
-				console.log(`fd-palette: fd search found ${directories.length} directories in ${searchTime}ms`);
-
-				// Cache the results
+				// Cache the results (using the same cache key since both methods return compatible results)
 				const cacheStartTime = Date.now();
 				await this.cacheManager.setCachedDirectories(searchParams, directories);
 				const cacheTime = Date.now() - cacheStartTime;
@@ -89,6 +110,11 @@ export class SearchOrchestrator {
 	async checkFdInstallation(): Promise<void> {
 		const searchParams = ConfigurationManager.getSearchParams();
 		await DirectorySearcher.checkFdInstallation(searchParams.fdPath);
+	}
+
+	async checkFzfInstallation(): Promise<void> {
+		const searchParams = ConfigurationManager.getSearchParams();
+		await DirectorySearcher.checkFzfInstallation(searchParams.fzfPath);
 	}
 
 	clearCache(): void {
