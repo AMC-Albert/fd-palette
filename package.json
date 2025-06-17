@@ -190,7 +190,7 @@
 				"ripOpen.fzfOptions": {
 					"type": "string",
 					"default": "--scheme=path --tiebreak=pathname,length --smart-case",
-					"description": "Additional options to pass to fzf for sorting and ranking behavior (e.g., '--scheme=path --tiebreak=pathname,length --smart-case')"
+					"description": "Additional options to pass to fzf for sorting and ranking behavior"
 				},
 				"ripOpen.enableCache": {
 					"type": "boolean",
@@ -237,7 +237,7 @@
 						"--hidden",
 						"--no-ignore"
 					],
-					"description": "Additional command-line arguments to pass to ripgrep (e.g., ['--follow', '--case-sensitive', '--max-depth=5']). Default includes common useful options."
+					"description": "Additional command-line arguments to pass to ripgrep"
 				},
 				"ripOpen.fzfFilterArgs": {
 					"type": "string",
