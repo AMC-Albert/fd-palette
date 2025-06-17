@@ -493,7 +493,8 @@ export class DirectorySearcher {
 			); // Parse ripgrep output to extract directories and workspace files
 			const results = this._parseRipgrepOutput(
 				stdout,
-				searchParams.includeWorkspaceFiles
+				searchParams.includeWorkspaceFiles,
+				searchPaths
 			);
 			console.log(
 				`rip-open: Found ${results.length} directories using ripgrep across ${
@@ -511,62 +512,46 @@ export class DirectorySearcher {
 	 */
 	private static _parseRipgrepOutput(
 		output: string,
-		includeWorkspaceFiles: boolean = false
+		includeWorkspaceFiles: boolean = false,
+		searchPaths: string[] = []
 	): DirectoryItem[] {
-		if (!output.trim()) {
-			console.log("rip-open: No ripgrep output to parse");
-			return [];
-		}
 		const directories = new Set<string>();
 		const workspaceFiles = new Set<string>();
-		const lines = output.split("\0").filter((line) => line.trim()); // Split by null separator
+		const lines = output.split("\0").filter((line) => line.trim());
 
-		console.log(
-			`rip-open: Parsing ${lines.length} file paths from ripgrep output`
-		);
-
-		// Extract directory paths from file paths and find workspace files
+		// Extract directory paths and workspace files
 		for (const filePath of lines) {
 			if (filePath.trim()) {
-				// Check if this is a workspace file
-				if (includeWorkspaceFiles && filePath.endsWith(".code-workspace")) {
+				if (includeWorkspaceFiles && filePath.endsWith('.code-workspace')) {
 					workspaceFiles.add(filePath);
 				}
-
-				// Always add the directory path
 				const dirPath = path.dirname(filePath);
 				directories.add(dirPath);
 			}
-		} // Found directories before filtering (reduced verbosity)
-		// Sample some directories for debugging
-		// const sampleDirs = Array.from(directories).slice(0, 10);
-		// console.log(`rip-open: Sample directories: ${sampleDirs.join(", ")}`);
+		}
 
-		// Look specifically for underscore directories
-		// const underscoreDirs = Array.from(directories).filter((dir) =>
-		// 	dir.includes("_")
-		// );
-		// console.log(
-		// 	`rip-open: Found ${
-		// 		underscoreDirs.length
-		// 	} directories containing underscores: ${underscoreDirs
-		// 		.slice(0, 5)
-		// 		.join(", ")}`
-		// );
+		// Add root-level directories to capture directories without files
+		for (const root of searchPaths) {
+			try {
+				const entries = fs.readdirSync(root, { withFileTypes: true });
+				for (const entry of entries) {
+					if (entry.isDirectory()) {
+						directories.add(path.join(root, entry.name));
+					}
+				}
+			} catch {
+				// ignore errors
+			}
+		}
+
 		// Convert directories to DirectoryItem array
 		const directoryItems: DirectoryItem[] = Array.from(directories)
 			.filter((dir) => {
-				// Filter out common undesirable directories
 				const dirName = path.basename(dir);
 				const shouldExcludeDotFolders =
 					ConfigurationManager.shouldExcludeHomeDotFolders();
-				const isDotFolder = dirName.startsWith(".");
-				const shouldInclude = !isDotFolder || !shouldExcludeDotFolders;
-				if (!shouldInclude) {
-					// Filtering out dot folder (reduced verbosity)
-				}
-
-				return shouldInclude;
+				const isDotFolder = dirName.startsWith('.');
+				return !isDotFolder || !shouldExcludeDotFolders;
 			})
 			.map((fullPath) => ({
 				label: path.basename(fullPath),
@@ -578,20 +563,17 @@ export class DirectorySearcher {
 		// Convert workspace files to DirectoryItem array
 		const workspaceItems: DirectoryItem[] = Array.from(workspaceFiles).map(
 			(fullPath) => ({
-				label: path.basename(fullPath, ".code-workspace"),
+				label: path.basename(fullPath, '.code-workspace'),
 				description: fullPath,
 				fullPath: fullPath,
 				itemType: ItemType.WorkspaceFile,
 			})
 		);
 
-		// Combine and sort all items
+		// Combine, sort, and return
 		const allItems = [...directoryItems, ...workspaceItems].sort((a, b) =>
 			a.label.localeCompare(b.label)
 		);
-
-		// Final count after filtering (reduced verbosity)
-
 		return allItems;
 	}
 
@@ -668,7 +650,21 @@ export class DirectorySearcher {
 						const dirPath = path.dirname(filePath);
 						directories.add(dirPath);
 					}
-				} // Convert directories to array and prepare for fzf sorting
+				} // Add root-level subdirectories to capture folders without files
+				for (const root of searchPaths) {
+					try {
+						const entries = fs.readdirSync(root, { withFileTypes: true });
+						for (const entry of entries) {
+							if (entry.isDirectory()) {
+								directories.add(path.join(root, entry.name));
+							}
+						}
+					} catch {
+						// ignore errors
+					}
+				}
+
+				// Convert to array and prepare for fzf sorting
 				const dirArray = Array.from(directories)
 					.filter((dir) => {
 						const dirName = path.basename(dir);
