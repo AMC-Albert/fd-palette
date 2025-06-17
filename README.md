@@ -1,6 +1,6 @@
 # Rip Open for Visual Studio Code
 
-System-wide directory search and workspace management [ripgrep](https://github.com/BurntSushi/ripgrep) and [fzf](https://github.com/junegunn/fzf).
+System-wide directory search and workspace management using [ripgrep](https://github.com/BurntSushi/ripgrep) and [fzf](https://github.com/junegunn/fzf).
 
 ## Features
 
