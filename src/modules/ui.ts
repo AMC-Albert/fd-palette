@@ -86,13 +86,14 @@ export class DirectoryPicker {
 						return;
 					}
 					isFilteringInProgress = true;
-
 					try {
 						if (value.trim() !== "") {
+							// Get the current fzf path (in case it was updated during search)
+							const currentFzfPath = ConfigurationManager.getFzfPath();
 							const filtered = await DirectoryFilter.filterWithFzf(
 								directories,
 								value,
-								fzfPath,
+								currentFzfPath,
 								cacheManager
 							); // Add subtle indicators for match quality without disrupting sorting
 							const enhancedResults = filtered.map((dir, index) => {
@@ -158,7 +159,7 @@ export class DirectoryPicker {
 					} finally {
 						isFilteringInProgress = false;
 					}
-				}, 50); // 50ms debounce - faster response
+				}, 150); // Reduced debounce for faster response
 			} else {
 				// Use VS Code's built-in filtering (traditional behavior)
 				if (value.trim() !== "" && shouldLimitInitialDisplay) {

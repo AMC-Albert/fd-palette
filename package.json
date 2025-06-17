@@ -197,11 +197,6 @@
 					"default": true,
 					"description": "Enable caching of search results for faster subsequent searches"
 				},
-				"ripOpen.cacheDurationMinutes": {
-					"type": "number",
-					"default": 2,
-					"description": "Cache duration in minutes before results are considered stale"
-				},
 				"ripOpen.enableBackgroundRefresh": {
 					"type": "boolean",
 					"default": true,

@@ -40,7 +40,6 @@ export class SearchOrchestrator {
 			);
 			return;
 		}
-
 		// No cached results found, performing fresh search
 		// Check if ripgrep is available
 		let rgPath: string;
@@ -51,40 +50,44 @@ export class SearchOrchestrator {
 			vscode.window.showErrorMessage(`ripgrep is not available: ${error}`);
 			return;
 		}
-		// Check if fzf is available
-		let useFzf = false;
-		try {
-			await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
-			useFzf = true;
-			// Reduced logging verbosity
-		} catch (error) {
-			// fzf not available, using basic ripgrep search
-			useFzf = false;
-		}
 
 		// Show a progress indicator while searching
 		const actionText =
 			action === DirectoryAction.AddToWorkspace
 				? "adding to workspace"
 				: "opening";
-		const searchMethodName = useFzf ? "ripgrep + fzf" : "ripgrep";
+
 		await vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.Notification,
-				title: `Searching directories with ${searchMethodName} for ${actionText}...`,
+				title: `Searching directories for ${actionText}...`,
 				cancellable: true,
 			},
 			async (progress, token) => {
 				try {
-					// Use ripgrep with or without fzf
-					const directories = useFzf
-						? await DirectorySearcher.findDirectoriesWithFzf(
-								searchParams,
-								token
-						  )
-						: await DirectorySearcher.findDirectories(searchParams, token);
+					let directories: DirectoryItem[];
+					let searchMethod = "unknown";
+
+					// Try fzf search first (includes fzf discovery during search)
+					try {
+						directories = await DirectorySearcher.findDirectoriesWithFzf(
+							searchParams,
+							token
+						);
+						searchMethod = "ripgrep + fzf";
+					} catch (fzfError) {
+						// fzf search failed, fall back to basic ripgrep
+						console.log(
+							`rip-open: fzf search failed, falling back to basic ripgrep: ${fzfError}`
+						);
+						directories = await DirectorySearcher.findDirectories(
+							searchParams,
+							token
+						);
+						searchMethod = "ripgrep";
+					}
 					if (directories.length === 0) {
-						const noResultsMessage = `No directories found using ${searchMethodName}.`;
+						const noResultsMessage = `No directories found using ${searchMethod}.`;
 						vscode.window.showInformationMessage(noResultsMessage, {
 							modal: false,
 						});

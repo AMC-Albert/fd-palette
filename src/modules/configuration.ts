@@ -141,14 +141,7 @@ export class ConfigurationManager {
 			const stats = await fs.promises.stat(dirPath);
 			return stats.isDirectory();
 		} catch {
-			return false;
-		}
-	}
-
-	static getCacheDuration(): number {
-		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-		const minutes = config.get<number>("cacheDurationMinutes") || 5;
-		return minutes * 60 * 1000; // Convert to milliseconds
+			return false;		}
 	}
 
 	static isCacheEnabled(): boolean {
@@ -188,11 +181,9 @@ export class ConfigurationManager {
 		const settingsToReset = [
 			"searchPath",
 			"excludePatterns",
-			"ripgrepPath",
-			"fzfPath",
+			"ripgrepPath",			"fzfPath",
 			"fzfOptions",
 			"enableCache",
-			"cacheDurationMinutes",
 			"enableBackgroundRefresh",
 			"openInWindow",
 			"excludeHomeDotFolders",

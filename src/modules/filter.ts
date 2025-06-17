@@ -19,44 +19,39 @@ export class DirectoryFilter {
 		if (query.trim().length < 2) {
 			return directories;
 		} // Limit dataset size for performance - fzf can be slow with very large datasets
-		const maxDatasetSize = 3000; // Reduced for faster performance
+		const maxDatasetSize = 2000; // Reduced further for faster performance
 		let datasetToFilter: DirectoryItem[];
 		if (directories.length > maxDatasetSize) {
-			// For general queries, use the existing permissive character-based matching
-			const queryChars = query.toLowerCase().replace(/\s+/g, "").split("");
+			// Fast pre-filtering with separator-aware matching
+			const queryLower = query.toLowerCase();
+			// Pre-compute query variations for efficient matching
+			const querySpaced = queryLower.replace(/[-_\.]/g, " ");
+			const queryNoSep = queryLower.replace(/[-_\.\s]/g, "");
 
 			const potentialMatches = directories.filter((dir) => {
-				if (queryChars.length === 0) {
+				// Quick checks: try different matching strategies
+				const dirName = path.basename(dir.fullPath).toLowerCase();
+				const fullPath = dir.fullPath.toLowerCase();
+
+				// Strategy 1: Direct substring match
+				if (dirName.includes(queryLower) || fullPath.includes(queryLower)) {
 					return true;
 				}
 
-				// Very permissive character-based matching for general queries
-				const searchTexts = [
-					`${dir.label} ${dir.fullPath}`
-						.toLowerCase()
-						.replace(/[\s\-_\.]/g, ""), // No separators
-					`${dir.label} ${dir.fullPath}`.toLowerCase().replace(/[\-_\.]/g, " "), // Spaces instead of separators
-					`${dir.label} ${dir.fullPath}`.toLowerCase(), // Original
-					path
-						.basename(dir.fullPath)
-						.toLowerCase()
-						.replace(/[\s\-_\.]/g, ""), // Just dirname, no separators
-				];
+				// Strategy 2: Separator-aware matching (only if query has separators)
+				if (queryLower !== querySpaced || queryLower !== queryNoSep) {
+					const dirNameSpaced = dirName.replace(/[-_\.]/g, " ");
+					const dirNameNoSep = dirName.replace(/[-_\.\s]/g, "");
 
-				// If any of the search texts can match all query characters in order, include this directory
-				return searchTexts.some((searchText) => {
-					let queryIndex = 0;
-					for (
-						let i = 0;
-						i < searchText.length && queryIndex < queryChars.length;
-						i++
-					) {
-						if (searchText[i] === queryChars[queryIndex]) {
-							queryIndex++;
-						}
-					}
-					return queryIndex === queryChars.length;
-				});
+					return (
+						dirNameSpaced.includes(querySpaced) ||
+						dirNameNoSep.includes(queryNoSep) ||
+						dirName.includes(querySpaced) ||
+						dirName.includes(queryNoSep)
+					);
+				}
+
+				return false;
 			});
 
 			datasetToFilter =
@@ -65,28 +60,34 @@ export class DirectoryFilter {
 					: potentialMatches
 							.sort((a, b) => a.fullPath.length - b.fullPath.length)
 							.slice(0, maxDatasetSize);
+		} else {
+			datasetToFilter = directories;
 		}
-		datasetToFilter = directories;
 		return new Promise((resolve) => {
-			// Prepare input for fzf: create enhanced searchable text optimized for fuzzy matching
+			// Prepare input for fzf: create optimized searchable text with separator handling
 			const directoryMap = new Map<string, DirectoryItem>();
-			const input = datasetToFilter
-				.map((dir, index) => {
-					const key = `${index}`;
-					directoryMap.set(key, dir); // Create focused searchable text optimized for fzf's fuzzy matching
-					const dirName = path.basename(dir.fullPath);
-					const fullPath = dir.fullPath;
-					const normalizedPath = fullPath.replace(/\\/g, "/");
+			const inputLines: string[] = [];
 
-					// Provide key variations to handle different separator conventions
-					// Include versions with hyphens, underscores, and no separators
-					const dirNameWithUnderscore = dirName.replace(/[-\.]/g, "_");
-					const dirNameNoSeparators = dirName.replace(/[-_\.]/g, "");
-					const searchText = `${normalizedPath} ${dirName} ${dirNameWithUnderscore} ${dirNameNoSeparators}`;
+			for (let i = 0; i < datasetToFilter.length; i++) {
+				const dir = datasetToFilter[i];
+				const key = String(i);
+				directoryMap.set(key, dir);
 
-					return `${key} ${searchText}`;
-				})
-				.join("\n"); // fzf arguments for enhanced fuzzy matching optimized for directory names
+				// Efficient separator character handling
+				const dirName = path.basename(dir.fullPath);
+				const normalizedPath = dir.fullPath.replace(/\\/g, "/");
+
+				// Pre-compute variations efficiently using single regex replacements
+				const dirNameSpaced = dirName.replace(/[-_\.]/g, " ");
+				const dirNameNoSep = dirName.replace(/[-_\.\s]/g, "");
+
+				// Compact format: key + variations separated by spaces for fzf to search
+				inputLines.push(
+					`${key} ${dirName} ${dirNameSpaced} ${dirNameNoSep} ${normalizedPath}`
+				);
+			}
+
+			const input = inputLines.join("\n"); // fzf arguments optimized for performance
 			// Get search parameters for fzf options
 			const searchParams = ConfigurationManager.getSearchParams();
 
@@ -95,21 +96,21 @@ export class DirectoryFilter {
 				.split(" ")
 				.filter((arg: string) => arg.trim());
 
-			// Use different strategies based on query characteristics
+			// Performance-optimized fzf arguments
 			const fzfArgs = [
 				"--filter",
 				query, // Non-interactive filtering mode
-				"--algo=v2", // Use optimal scoring algorithm
-				"+x", // Disable extended search to handle special characters (!, ^, $, etc.) as literals
-				// --literal doesn't work properly with ! at start of query (treated as negation)
+				"--algo=v1", // Use faster v1 algorithm for better performance
+				"+x", // Disable extended search
 				"--delimiter",
 				" ", // Use space as delimiter
 				"--with-nth",
 				"2..", // Only search in text after the key
-				"--tiebreak=length,begin", // Prefer shorter matches and matches at the beginning (fallback if user doesn't specify)
+				"--tiebreak=length", // Simple tiebreaker for performance
 				...userFzfOptions, // Add compatible user options
 			];
 
+			console.log(`rip-open: filter.ts spawning fzf with path: ${fzfPath}`);
 			const fzfChild = spawn(fzfPath, fzfArgs, {
 				stdio: ["pipe", "pipe", "pipe"],
 			});

@@ -291,6 +291,19 @@ export class DirectorySearcher {
 	}
 
 	/**
+	 * Clear fzf availability cache for a specific path
+	 */
+	static async clearFzfCache(fzfPath: string): Promise<void> {
+		if (!this._extensionContext) {
+			return;
+		}
+
+		const cacheKey = `fzf-availability-${fzfPath}`;
+		await this._extensionContext.globalState.update(cacheKey, undefined);
+		console.log(`rip-open: Cleared fzf availability cache for: ${fzfPath}`);
+	}
+
+	/**
 	 * Run fzf availability check
 	 */
 	private static async _runFzfAvailabilityCheck(
@@ -477,17 +490,38 @@ export class DirectorySearcher {
 				baseArgs,
 				searchPaths,
 				token
-			); // Parse ripgrep output to extract directories and workspace files
-			const results = this._parseRipgrepOutput(
+			); // Parse ripgrep output to extract directories, workspace files, and fzf executables
+			const { items: results, foundFzfPaths } = this._parseRipgrepOutput(
 				stdout,
 				searchParams.includeWorkspaceFiles,
 				searchPaths
 			);
+
+			// Update fzf path if we found better options and update current search params
+			const updatedFzfPath = await this._updateFzfPathIfBetter(
+				foundFzfPaths,
+				searchParams.fzfPath
+			);
+			if (updatedFzfPath !== searchParams.fzfPath) {
+				searchParams.fzfPath = updatedFzfPath;
+				console.log(
+					`rip-open: Using newly found fzf path for current search: ${updatedFzfPath}`
+				);
+			}
+
 			console.log(
 				`rip-open: Found ${results.length} directories using ripgrep across ${
 					searchPaths.length || "root"
 				} search paths`
 			);
+
+			if (foundFzfPaths.length > 0) {
+				console.log(
+					`rip-open: Found ${
+						foundFzfPaths.length
+					} fzf executable(s): ${foundFzfPaths.join(", ")}`
+				);
+			}
 
 			return results;
 		} catch (error) {
@@ -495,21 +529,48 @@ export class DirectorySearcher {
 		}
 	}
 	/**
-	 * Parse ripgrep output to extract unique directories and workspace files
+	 * Parse ripgrep output to extract unique directories, workspace files, and fzf executables
 	 */
 	private static _parseRipgrepOutput(
 		output: string,
 		includeWorkspaceFiles: boolean = false,
 		searchPaths: string[] = []
-	): DirectoryItem[] {
+	): { items: DirectoryItem[]; foundFzfPaths: string[] } {
 		const directories = new Set<string>();
 		const workspaceFiles = new Set<string>();
+		const fzfPaths = new Set<string>();
 		const lines = output.split("\0").filter((line) => line.trim());
-		// Extract directory paths and workspace files
+
+		// Extract directory paths, workspace files, and fzf executables
 		for (const filePath of lines) {
 			if (filePath.trim()) {
 				if (includeWorkspaceFiles && filePath.endsWith(".code-workspace")) {
 					workspaceFiles.add(filePath);
+				}
+
+				// Check if this could be an fzf executable
+				const fileName = path.basename(filePath).toLowerCase();
+				const isExecutable =
+					process.platform === "win32"
+						? fileName === "fzf.exe" || fileName === "fzf"
+						: fileName === "fzf";
+
+				if (isExecutable) {
+					// Verify it's actually executable (basic check)
+					try {
+						const stats = fs.statSync(filePath);
+						if (
+							stats.isFile() &&
+							(process.platform === "win32" || stats.mode & parseInt("111", 8))
+						) {
+							fzfPaths.add(filePath);
+							console.log(
+								`rip-open: Found potential fzf executable: ${filePath}`
+							);
+						}
+					} catch {
+						// Ignore stat errors
+					}
 				}
 
 				// Extract all directory path segments from the file path
@@ -556,12 +617,15 @@ export class DirectorySearcher {
 				itemType: ItemType.WorkspaceFile,
 			})
 		);
-
 		// Combine, sort, and return
 		const allItems = [...directoryItems, ...workspaceItems].sort((a, b) =>
 			a.label.localeCompare(b.label)
 		);
-		return allItems;
+
+		return {
+			items: allItems,
+			foundFzfPaths: Array.from(fzfPaths),
+		};
 	}
 
 	/**
@@ -599,43 +663,40 @@ export class DirectorySearcher {
 					`rip-open: Additional ripgrep args: ${searchParams.additionalRipgrepArgs.join(
 						" "
 					)}`
-				);
-
-				// Run ripgrep across all search paths
+				); // Run ripgrep across all search paths
 				const rgOutput = await this._runRipgrepMultiplePaths(
 					rgPath,
 					baseArgs,
 					searchPaths,
 					token
-				); // Extract unique directories and workspace files from ripgrep output
+				);
+
+				// Parse ripgrep output to extract directories, workspace files, and fzf executables
+				const { items: parsedItems, foundFzfPaths } = this._parseRipgrepOutput(
+					rgOutput,
+					searchParams.includeWorkspaceFiles,
+					searchPaths
+				); // Update fzf path if we found better options and update current search params
+				const updatedFzfPath = await this._updateFzfPathIfBetter(
+					foundFzfPaths,
+					searchParams.fzfPath
+				);
+				if (updatedFzfPath !== searchParams.fzfPath) {
+					searchParams.fzfPath = updatedFzfPath;
+					console.log(
+						`rip-open: Using newly found fzf path for current search: ${updatedFzfPath}`
+					);
+				}
+
+				// Extract directories and workspace files from parsed items
 				const directories = new Set<string>();
 				const workspaceFiles = new Set<string>();
-				const lines = rgOutput
-					.split("\0")
-					.filter((line: string) => line.trim());
 
-				for (const filePath of lines) {
-					if (filePath.trim()) {
-						// Check if this is a workspace file
-						if (
-							searchParams.includeWorkspaceFiles &&
-							filePath.endsWith(".code-workspace")
-						) {
-							workspaceFiles.add(filePath);
-						} // Always add the directory path and all intermediate paths
-						this._extractAllDirectoryPaths(filePath, directories, searchPaths);
-					}
-				} // Add root-level subdirectories to capture folders without files
-				for (const root of searchPaths) {
-					try {
-						const entries = fs.readdirSync(root, { withFileTypes: true });
-						for (const entry of entries) {
-							if (entry.isDirectory()) {
-								directories.add(path.join(root, entry.name));
-							}
-						}
-					} catch {
-						// ignore errors
+				for (const item of parsedItems) {
+					if (item.itemType === ItemType.Directory) {
+						directories.add(item.fullPath);
+					} else if (item.itemType === ItemType.WorkspaceFile) {
+						workspaceFiles.add(item.fullPath);
 					}
 				}
 
@@ -648,10 +709,16 @@ export class DirectorySearcher {
 							ConfigurationManager.shouldExcludeHomeDotFolders() === false
 						);
 					})
-					.sort();
-
-				// Convert workspace files to array
+					.sort(); // Convert workspace files to array
 				const workspaceArray = Array.from(workspaceFiles);
+
+				if (foundFzfPaths.length > 0) {
+					console.log(
+						`rip-open: Found ${
+							foundFzfPaths.length
+						} fzf executable(s) during search: ${foundFzfPaths.join(", ")}`
+					);
+				}
 
 				// Combine all items for fzf processing
 				const allItems = [...dirArray, ...workspaceArray];
@@ -718,13 +785,40 @@ export class DirectorySearcher {
 						.slice(0, 5)
 						.join(", ")}`
 				);
-
 				const fzfChild = spawn(searchParams.fzfPath, fzfArgs, {
 					stdio: ["pipe", "pipe", "pipe"],
 				});
 
 				let fzfOutput = "";
-				let fzfError = ""; // Send combined list to fzf stdin
+				let fzfError = "";
+
+				// Handle spawn errors (e.g., file not found)
+				fzfChild.on("error", async (spawnError) => {
+					console.warn(`rip-open: fzf spawn error: ${spawnError.message}`);
+
+					// Clear the invalid cache entry
+					await this.clearFzfCache(searchParams.fzfPath);
+
+					// Fall back to basic alphabetical sorting
+					const directories = dirArray.map((fullPath) => ({
+						label: path.basename(fullPath),
+						description: fullPath,
+						fullPath: fullPath,
+						itemType: ItemType.Directory,
+					}));
+
+					const workspaceItems = workspaceArray.map((fullPath) => ({
+						label: path.basename(fullPath, ".code-workspace"),
+						description: fullPath,
+						fullPath: fullPath,
+						itemType: ItemType.WorkspaceFile,
+					}));
+
+					const combinedItems = [...directories, ...workspaceItems].sort(
+						(a, b) => a.label.localeCompare(b.label)
+					);
+					resolve(combinedItems);
+				}); // Send combined list to fzf stdin
 				console.log(
 					`rip-open: Sending ${allItemsInput.length} characters to fzf stdin`
 				);
@@ -845,6 +939,72 @@ export class DirectorySearcher {
 				reject(error);
 			}
 		});
+	}
+
+	/**
+	 * Update the fzf path configuration if we found better fzf executables
+	 */
+	private static async _updateFzfPathIfBetter(
+		foundFzfPaths: string[],
+		currentFzfPath: string
+	): Promise<string> {
+		if (foundFzfPaths.length === 0) {
+			return currentFzfPath;
+		}
+		// Update fzf path if:
+		// 1. Current path is "fzf" (default) and we found actual paths, OR
+		// 2. Current path doesn't exist and we found better paths
+		const shouldUpdate =
+			currentFzfPath === "fzf" ||
+			(currentFzfPath !== "fzf" &&
+				!fs.existsSync(currentFzfPath) &&
+				foundFzfPaths.length > 0);
+
+		if (shouldUpdate) {
+			// Prefer paths that are in common binary directories
+			const preferredPaths = foundFzfPaths.filter(
+				(fzfPath) =>
+					fzfPath.includes("/bin/") ||
+					fzfPath.includes("\\bin\\") ||
+					fzfPath.includes("/usr/") ||
+					fzfPath.includes("Program Files")
+			);
+			const bestPath =
+				preferredPaths.length > 0 ? preferredPaths[0] : foundFzfPaths[0];
+
+			// Update the configuration (this will be used for subsequent searches)
+			try {
+				vscode.workspace
+					.getConfiguration("ripOpen")
+					.update("fzfPath", bestPath, vscode.ConfigurationTarget.Global);
+				console.log(`rip-open: Updated fzf path to: ${bestPath}`);
+
+				// Update the cache to mark the new path as available
+				if (this._extensionContext) {
+					// Clear any old cache entries for the previous path
+					const oldCacheKey = `fzf-availability-${currentFzfPath}`;
+					await this._extensionContext.globalState.update(
+						oldCacheKey,
+						undefined
+					);
+
+					// Set the new path as available in cache
+					const newCacheKey = `fzf-availability-${bestPath}`;
+					await this._extensionContext.globalState.update(newCacheKey, {
+						available: true,
+					});
+					console.log(
+						`rip-open: Updated fzf availability cache for: ${bestPath}`
+					);
+				}
+			} catch (error) {
+				console.warn(`rip-open: Failed to update fzf path: ${error}`);
+			}
+
+			return bestPath;
+		}
+
+		return currentFzfPath;
 	}
 
 	/**

@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import * as crypto from "crypto";
 import { CacheEntry, DirectoryItem, SearchParams } from "./types";
 import { ConfigurationManager } from "./configuration";
 
@@ -11,10 +10,11 @@ export class CacheManager {
 	private isPreloading = false;
 	private preloadingPromise: Promise<void> | null = null;
 	private cacheDir: string | null = null;
-	private fileCacheDisabled = false;
-	// Background refresh tracking
+	private fileCacheDisabled = false; // Background refresh tracking
 	private backgroundRefreshes = new Map<string, Promise<void>>();
 	private refreshDebounceTimers = new Map<string, NodeJS.Timeout>();
+	private lastRefreshTimes = new Map<string, number>();
+	private readonly REFRESH_BUFFER_MS = 10000; // 10 seconds buffer
 
 	// Git repository cache for performance optimization
 	private gitRepoCache = new Map<string, boolean>();
@@ -66,10 +66,16 @@ export class CacheManager {
 		}
 	}
 	private getCacheFilePath(cacheKey: string, cacheDir?: string): string {
-		// Use SHA256 hash to create a short, predictable filename
-		const hash = crypto.createHash("sha256").update(cacheKey).digest("hex");
+		// Use a simple hash to create a short, predictable filename
+		let hash = 0;
+		for (let i = 0; i < cacheKey.length; i++) {
+			const char = cacheKey.charCodeAt(i);
+			hash = (hash << 5) - hash + char;
+			hash = hash & hash; // Convert to 32bit integer
+		}
+		const hashString = Math.abs(hash).toString(16);
 		const basePath = cacheDir || this.getCacheDir();
-		return path.join(basePath, `cache_${hash.substring(0, 16)}.json`);
+		return path.join(basePath, `cache_${hashString}.json`);
 	}
 	private getCacheKey(searchParams: SearchParams): string {
 		const { searchPath, excludePatterns, additionalRipgrepArgs } = searchParams;
@@ -85,10 +91,8 @@ export class CacheManager {
 			if (!fs.existsSync(cacheDir)) {
 				return;
 			}
-
 			const files = fs.readdirSync(cacheDir);
-			const cacheDuration = ConfigurationManager.getCacheDuration();
-			const maxAge = cacheDuration * 10; // Only cleanup cache 10x older than normal duration
+			const maxAge = 24 * 60 * 60 * 1000; // 24 hours for cleanup (keep cache files longer)
 			const now = Date.now();
 
 			files.forEach((file) => {
@@ -182,21 +186,38 @@ export class CacheManager {
 		}
 
 		const cacheKey = this.getCacheKey(searchParams);
-		const entry = this.memoryCache.get(cacheKey);
+		let entry = this.memoryCache.get(cacheKey);
+
 		if (!entry) {
-			// Cache MISS - no entry found
+			// Cache MISS in memory - try loading from disk immediately
+			try {
+				const cacheFilePath = this.getCacheFilePath(cacheKey);
+				if (fs.existsSync(cacheFilePath)) {
+					const fileContent = fs.readFileSync(cacheFilePath, "utf8");
+					const diskEntry = JSON.parse(fileContent) as CacheEntry;
+					if (diskEntry && diskEntry.version === 1) {
+						// Load into memory cache for next time
+						this.memoryCache.set(cacheKey, diskEntry);
+						entry = diskEntry;
+						console.log(
+							`rip-open: Loaded cache from disk on-demand (${diskEntry.directories.length} entries)`
+						);
+					}
+				}
+			} catch (error) {
+				// Skip invalid files - file may be corrupted or incomplete
+				console.warn("rip-open: Failed to load cache from disk:", error);
+			}
+		}
+
+		if (!entry) {
+			// Cache MISS - no entry found in memory or disk
 			return null;
 		}
 
-		// Check if cache is expired
+		// Check if cache exists (no expiration check)
 		const age = Date.now() - entry.timestamp;
-		const maxAge = ConfigurationManager.getCacheDuration();
-		const isExpired = age > maxAge;
-		if (isExpired) {
-			// Cache EXPIRED - using stale cache, will refresh in background
-		} else {
-			// Cache HIT - returning directories from memory cache
-		}
+		// Always return cache if it exists, background refresh will keep it updated
 
 		return entry.directories;
 	}
@@ -218,7 +239,9 @@ export class CacheManager {
 		) {
 			// Automatically refresh if cache is expired
 			if (this.shouldRefreshInBackground(searchParams)) {
-				console.log("rip-open: Cache expired - triggering background refresh");
+				console.log(
+					"rip-open: Triggering background refresh (10s buffer passed)"
+				);
 				this.triggerBackgroundRefresh(searchParams);
 			}
 		}
@@ -227,7 +250,7 @@ export class CacheManager {
 	}
 	/**
 	 * Determines if cache should be refreshed in background
-	 * Now simply checks if cache is expired
+	 * Only allows refresh if 10 seconds have passed since last refresh
 	 */
 	private shouldRefreshInBackground(searchParams: SearchParams): boolean {
 		const cacheKey = this.getCacheKey(searchParams);
@@ -237,16 +260,22 @@ export class CacheManager {
 			return false;
 		}
 
-		const entry = this.memoryCache.get(cacheKey);
-		if (!entry) {
+		// Check if 10 seconds have passed since last refresh
+		const lastRefreshTime = this.lastRefreshTimes.get(cacheKey) || 0;
+		const now = Date.now();
+		const timeSinceLastRefresh = now - lastRefreshTime;
+
+		if (timeSinceLastRefresh < this.REFRESH_BUFFER_MS) {
+			const remainingTime = Math.ceil(
+				(this.REFRESH_BUFFER_MS - timeSinceLastRefresh) / 1000
+			);
+			console.log(
+				`rip-open: Skipping background refresh, ${remainingTime}s remaining in buffer`
+			);
 			return false;
 		}
 
-		// Refresh if cache is expired (age > cache duration)
-		const age = Date.now() - entry.timestamp;
-		const maxAge = ConfigurationManager.getCacheDuration();
-
-		return age > maxAge;
+		return true;
 	}
 
 	/**
@@ -267,7 +296,6 @@ export class CacheManager {
 
 		this.refreshDebounceTimers.set(cacheKey, timer);
 	}
-
 	/**
 	 * Performs the actual background refresh
 	 */
@@ -280,6 +308,9 @@ export class CacheManager {
 		if (this.backgroundRefreshes.has(cacheKey)) {
 			return;
 		}
+
+		// Record the refresh start time
+		this.lastRefreshTimes.set(cacheKey, Date.now());
 
 		console.log(
 			"rip-open: Starting background cache refresh for:",
@@ -377,8 +408,15 @@ export class CacheManager {
 		const useGlobalState = directories.length <= MAX_GLOBALSTATE_ENTRIES;
 		if (useGlobalState) {
 			const globalStateStartTime = Date.now();
-			const hash = crypto.createHash("sha256").update(cacheKey).digest("hex");
-			const diskCacheKey = `rip-open-cache-${hash.substring(0, 16)}`;
+			// Use simple hash for globalState key
+			let hash = 0;
+			for (let i = 0; i < cacheKey.length; i++) {
+				const char = cacheKey.charCodeAt(i);
+				hash = (hash << 5) - hash + char;
+				hash = hash & hash; // Convert to 32bit integer
+			}
+			const hashString = Math.abs(hash).toString(16);
+			const diskCacheKey = `rip-open-cache-${hashString}`;
 			await this.extensionContext.globalState.update(diskCacheKey, entry);
 			console.log(
 				`rip-open: GlobalState cache took ${
@@ -389,7 +427,8 @@ export class CacheManager {
 			console.log(
 				`rip-open: Skipping globalState cache for large dataset (${directories.length} entries), using file cache only`
 			);
-		} // Store in file-based cache for persistence across extension reloads
+		}
+		// Store in file-based cache for persistence across extension reloads
 		if (!this.fileCacheDisabled) {
 			// Get fresh cache directory path and ensure it exists
 			const cacheDir = this.getCacheDir();
@@ -410,29 +449,68 @@ export class CacheManager {
 				if (!fs.existsSync(cacheDir)) {
 					throw new Error(`Failed to create cache directory: ${cacheDir}`);
 				}
-				const cacheFilePath = this.getCacheFilePath(cacheKey, cacheDir);
-				console.log("rip-open: Writing to cache file:", cacheFilePath);
-				console.log("rip-open: Cache file path length:", cacheFilePath.length);
+				const cacheFilePath = this.getCacheFilePath(cacheKey, cacheDir); // Check if we need to write by comparing with existing file
+				let shouldWrite = true;
+				if (fs.existsSync(cacheFilePath)) {
+					try {
+						const existingContent = fs.readFileSync(cacheFilePath, "utf8");
+						const existingEntry = JSON.parse(existingContent) as CacheEntry;
 
-				// Ensure parent directory of cache file exists (should be same as cacheDir)
-				const parentDir = path.dirname(cacheFilePath);
-				if (!fs.existsSync(parentDir)) {
+						// Quick comparison: same number of directories means likely same content
+						const sameLength =
+							existingEntry.directories.length === directories.length;
+
+						if (sameLength) {
+							shouldWrite = false;
+							console.log(
+								`rip-open: Cache content likely unchanged (${directories.length} directories), skipping write`
+							);
+						} else {
+							console.log(
+								`rip-open: Cache size changed (${existingEntry.directories.length} -> ${directories.length}), writing update`
+							);
+						}
+					} catch (error) {
+						console.log(
+							"rip-open: Error reading existing cache file, will overwrite:",
+							error
+						);
+						shouldWrite = true;
+					}
+				} else {
+					console.log("rip-open: No existing cache file, writing new cache");
+				}
+
+				if (shouldWrite) {
+					console.log("rip-open: Writing to cache file:", cacheFilePath);
 					console.log(
-						"rip-open: Parent directory missing, creating:",
-						parentDir
+						"rip-open: Cache file path length:",
+						cacheFilePath.length
 					);
-					fs.mkdirSync(parentDir, { recursive: true });
-				}
 
-				// Additional diagnostic: check if the path is too long (Windows limitation)
-				if (process.platform === "win32" && cacheFilePath.length > 260) {
-					console.warn(
-						`rip-open: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
+					// Ensure parent directory of cache file exists (should be same as cacheDir)
+					const parentDir = path.dirname(cacheFilePath);
+					if (!fs.existsSync(parentDir)) {
+						console.log(
+							"rip-open: Parent directory missing, creating:",
+							parentDir
+						);
+						fs.mkdirSync(parentDir, { recursive: true });
+					}
+
+					// Additional diagnostic: check if the path is too long (Windows limitation)
+					if (process.platform === "win32" && cacheFilePath.length > 260) {
+						console.warn(
+							`rip-open: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
+						);
+					}
+
+					fs.writeFileSync(cacheFilePath, JSON.stringify(entry), "utf8");
+					console.log(
+						"rip-open: Successfully wrote cache file:",
+						cacheFilePath
 					);
 				}
-
-				fs.writeFileSync(cacheFilePath, JSON.stringify(entry), "utf8");
-				console.log("rip-open: Successfully wrote cache file:", cacheFilePath);
 			} catch (error: any) {
 				console.error("Error writing file cache:", error);
 				console.error(
