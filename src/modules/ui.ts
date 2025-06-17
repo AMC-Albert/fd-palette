@@ -39,8 +39,8 @@ export class DirectoryPicker {
 			// Transform directories to preserve fzf ordering
 			displayDirectories = directories.map((dir, index) => ({
 				...dir,
-				// Add subtle visual indicator for match quality (will be computed during filtering)
-				sortText: `${String(index).padStart(6, "0")}_${dir.label}`, // Preserve order
+				// Use sortText to enforce ordering - pad with zeros for proper sorting
+				sortText: `${String(index).padStart(6, "0")}`, // Preserve order
 			}));
 		} else {
 			// Use VS Code's built-in filtering with highlighting
@@ -89,26 +89,30 @@ export class DirectoryPicker {
 								directories,
 								value,
 								fzfPath
-							);
-
-							// Add subtle indicators for match quality without disrupting the core functionality
+							); // Add subtle indicators for match quality without disrupting sorting
 							const enhancedResults = filtered.map((dir, index) => {
 								// Calculate a simple match quality score based on fzf ranking
 								const matchQuality = Math.max(0, 1 - index / filtered.length);
 								const qualityIndicator =
 									matchQuality > 0.9
-										? "★ "
+										? "★"
 										: matchQuality > 0.7
-										? "• "
+										? "•"
 										: matchQuality > 0.3
-										? "· "
+										? "·"
 										: "";
+
+								// Keep original label clean, put quality indicator in description
+								const originalDescription = dir.description || dir.fullPath;
+								const enhancedDescription = qualityIndicator
+									? `${qualityIndicator} ${originalDescription}`
+									: originalDescription;
 
 								return {
 									...dir,
-									label: `${qualityIndicator}${dir.label}`,
+									description: enhancedDescription,
 									alwaysShow: true, // Bypass VS Code's filtering
-									sortText: `${String(index).padStart(6, "0")}_${dir.label}`, // Maintain fzf order
+									sortText: `${String(index).padStart(6, "0")}`, // Maintain fzf order with proper padding
 								};
 							});
 							quickPick.items = enhancedResults;

@@ -14,58 +14,144 @@ export class DirectoryFilter {
 		// Early return for very short queries - fzf isn't effective with single characters
 		if (query.trim().length < 2) {
 			return directories;
+		} // Limit dataset size for performance - fzf can be slow with very large datasets
+		const maxDatasetSize = 5000; // Increase limit since fzf is quite fast
+		let datasetToFilter: DirectoryItem[];
+		if (directories.length > maxDatasetSize) {
+			// For very large datasets, we need some pre-filtering
+			// Use different strategies based on query characteristics
+			const isSpecificQuery = query.length > 3 && !query.includes(" ");
+
+			if (isSpecificQuery) {
+				// For specific queries like "ripopen", be more restrictive in pre-filtering
+				const potentialMatches = directories.filter((dir) => {
+					const dirName = path.basename(dir.fullPath).toLowerCase();
+					const queryLower = query.toLowerCase();
+
+					// Check for exact substring match first (fastest)
+					if (dirName.includes(queryLower)) {
+						return true;
+					}
+
+					// Check for match without separators
+					const dirNameNoSep = dirName.replace(/[-_\.]/g, "");
+					const queryNoSep = queryLower.replace(/[-_\.]/g, "");
+					if (dirNameNoSep.includes(queryNoSep)) {
+						return true;
+					}
+
+					// Only use character-based fuzzy matching as last resort
+					const queryChars = queryNoSep.split("");
+					let queryIndex = 0;
+					for (
+						let i = 0;
+						i < dirNameNoSep.length && queryIndex < queryChars.length;
+						i++
+					) {
+						if (dirNameNoSep[i] === queryChars[queryIndex]) {
+							queryIndex++;
+						}
+					}
+					return queryIndex === queryChars.length;
+				});
+
+				datasetToFilter =
+					potentialMatches.length <= maxDatasetSize
+						? potentialMatches
+						: potentialMatches
+								.sort((a, b) => a.fullPath.length - b.fullPath.length)
+								.slice(0, maxDatasetSize);
+			} else {
+				// For general queries, use the existing permissive character-based matching
+				const queryChars = query.toLowerCase().replace(/\s+/g, "").split("");
+
+				const potentialMatches = directories.filter((dir) => {
+					if (queryChars.length === 0) {
+						return true;
+					}
+
+					// Very permissive character-based matching for general queries
+					const searchTexts = [
+						`${dir.label} ${dir.fullPath}`
+							.toLowerCase()
+							.replace(/[\s\-_\.]/g, ""), // No separators
+						`${dir.label} ${dir.fullPath}`
+							.toLowerCase()
+							.replace(/[\-_\.]/g, " "), // Spaces instead of separators
+						`${dir.label} ${dir.fullPath}`.toLowerCase(), // Original
+						path
+							.basename(dir.fullPath)
+							.toLowerCase()
+							.replace(/[\s\-_\.]/g, ""), // Just dirname, no separators
+					];
+
+					// If any of the search texts can match all query characters in order, include this directory
+					return searchTexts.some((searchText) => {
+						let queryIndex = 0;
+						for (
+							let i = 0;
+							i < searchText.length && queryIndex < queryChars.length;
+							i++
+						) {
+							if (searchText[i] === queryChars[queryIndex]) {
+								queryIndex++;
+							}
+						}
+						return queryIndex === queryChars.length;
+					});
+				});
+
+				datasetToFilter =
+					potentialMatches.length <= maxDatasetSize
+						? potentialMatches
+						: potentialMatches
+								.sort((a, b) => a.fullPath.length - b.fullPath.length)
+								.slice(0, maxDatasetSize);
+			}
+		} else {
+			datasetToFilter = directories;
 		}
-
-		// Limit dataset size for performance - fzf can be slow with very large datasets
-		const maxDatasetSize = 3000;
-		const datasetToFilter =
-			directories.length > maxDatasetSize
-				? directories.slice(0, maxDatasetSize)
-				: directories;
-
 		return new Promise((resolve) => {
 			// Prepare input for fzf: create enhanced searchable text optimized for fuzzy matching
 			const directoryMap = new Map<string, DirectoryItem>();
 			const input = datasetToFilter
 				.map((dir, index) => {
 					const key = `${index}`;
-					directoryMap.set(key, dir);
-
-					// Create searchable text optimized for fzf's path scheme
-					// The path scheme gives bonus points to matches after path separators
+					directoryMap.set(key, dir); // Create focused searchable text optimized for fzf's fuzzy matching
 					const dirName = path.basename(dir.fullPath);
 					const fullPath = dir.fullPath;
-
-					// Create multiple searchable variants for better matching
-					// Use forward slashes as separators for consistent path handling across platforms
 					const normalizedPath = fullPath.replace(/\\/g, "/");
-					const normalizedDirName = dirName.replace(/[-_]/g, " ");
 
-					// Build searchable text: prioritize the actual path structure
-					// fzf's path scheme will automatically give bonus to directory name matches
-					const searchText = [
-						normalizedPath, // Full path with normalized separators
-						normalizedDirName, // Normalized directory name for space-separated queries
-						dirName, // Original directory name for exact matches
-					].join(" ");
+					// Provide key variations to handle different separator conventions
+					// Include versions with hyphens, underscores, and no separators
+					const dirNameWithUnderscore = dirName.replace(/[-\.]/g, "_");
+					const dirNameNoSeparators = dirName.replace(/[-_\.]/g, "");
+					const searchText = `${normalizedPath} ${dirName} ${dirNameWithUnderscore} ${dirNameNoSeparators}`;
 
 					return `${key} ${searchText}`;
 				})
-				.join("\n");
-
-			// fzf arguments for enhanced fuzzy matching optimized for directory names
+				.join("\n"); // fzf arguments for enhanced fuzzy matching optimized for directory names
+			// Use different strategies based on query characteristics
+			const isSpecificQuery = query.length > 3 && !query.includes(" ");
 			const fzfArgs = [
 				"--filter",
 				query, // Non-interactive filtering mode
-				"--scheme=path", // Use path-optimized scoring - gives bonus to matches after path separators
 				"--algo=v2", // Use optimal scoring algorithm
-				"--smart-case", // Smart case: case-insensitive unless query has uppercase
-				"--delimiter",
-				" ", // Use space as delimiter
-				"--with-nth",
-				"2..", // Only search in text after the key
-				"--tiebreak=pathname,length", // Use path-aware tiebreaking (set automatically by --scheme=path)
 			];
+
+			// For specific queries like "ripopen", use exact matching to be more restrictive
+			// For general queries, use fuzzy matching
+			if (isSpecificQuery) {
+				fzfArgs.push("--exact"); // Exact substring matching, more restrictive
+			}
+
+			fzfArgs.push(
+				"-i", // Case-insensitive matching
+				"--delimiter",
+				" ", // Use space as delimiter				"--with-nth",
+				"2..", // Only search in text after the key
+				"--tiebreak=length,begin" // Prefer shorter matches and matches at the beginning
+			);
 
 			const fzfChild = spawn(fzfPath, fzfArgs, {
 				stdio: ["pipe", "pipe", "pipe"],
@@ -81,7 +167,6 @@ export class DirectoryFilter {
 				console.warn(`rip-open: fzf filter error: ${data.toString()}`);
 				hasError = true;
 			});
-
 			fzfChild.on("close", (code) => {
 				if (hasError || (code !== null && code !== 0)) {
 					// Fall back to enhanced fuzzy-like filtering if fzf fails
