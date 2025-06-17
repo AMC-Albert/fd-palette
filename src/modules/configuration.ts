@@ -83,35 +83,6 @@ export class ConfigurationManager {
 	}
 
 	/**
-	 * Gets the first valid directory from the searchPath array, with caching
-	 * @deprecated Use getValidSearchPaths() for better multi-path support
-	 */
-	static async getValidSearchPath(): Promise<string> {
-		const searchPaths = this.getSearchParams().searchPath;
-
-		// If no paths configured, return empty string (search from root)
-		if (!searchPaths || searchPaths.length === 0) {
-			return "";
-		}
-		// Check each path and return the first valid one
-		for (const searchPath of searchPaths) {
-			if (!searchPath.trim()) {
-				continue;
-			}
-
-			const expandedPath = this.expandPath(searchPath);
-			if (await this.isDirectoryValid(expandedPath)) {
-				return expandedPath;
-			}
-		}
-
-		// No valid paths found
-		throw new Error(
-			`No valid directories found in searchPath: ${searchPaths.join(", ")}`
-		);
-	}
-
-	/**
 	 * Expands ~ and environment variables in path
 	 */
 	private static expandPath(inputPath: string): string {

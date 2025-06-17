@@ -22,99 +22,51 @@ export class DirectoryFilter {
 		const maxDatasetSize = 3000; // Reduced for faster performance
 		let datasetToFilter: DirectoryItem[];
 		if (directories.length > maxDatasetSize) {
-			// For very large datasets, we need some pre-filtering
-			// Use different strategies based on query characteristics
-			const isSpecificQuery = query.length > 3 && !query.includes(" ");
+			// For general queries, use the existing permissive character-based matching
+			const queryChars = query.toLowerCase().replace(/\s+/g, "").split("");
 
-			if (isSpecificQuery) {
-				// For specific queries like "ripopen", be more restrictive in pre-filtering
-				const potentialMatches = directories.filter((dir) => {
-					const dirName = path.basename(dir.fullPath).toLowerCase();
-					const queryLower = query.toLowerCase();
+			const potentialMatches = directories.filter((dir) => {
+				if (queryChars.length === 0) {
+					return true;
+				}
 
-					// Check for exact substring match first (fastest)
-					if (dirName.includes(queryLower)) {
-						return true;
-					}
+				// Very permissive character-based matching for general queries
+				const searchTexts = [
+					`${dir.label} ${dir.fullPath}`
+						.toLowerCase()
+						.replace(/[\s\-_\.]/g, ""), // No separators
+					`${dir.label} ${dir.fullPath}`.toLowerCase().replace(/[\-_\.]/g, " "), // Spaces instead of separators
+					`${dir.label} ${dir.fullPath}`.toLowerCase(), // Original
+					path
+						.basename(dir.fullPath)
+						.toLowerCase()
+						.replace(/[\s\-_\.]/g, ""), // Just dirname, no separators
+				];
 
-					// Check for match without separators
-					const dirNameNoSep = dirName.replace(/[-_\.]/g, "");
-					const queryNoSep = queryLower.replace(/[-_\.]/g, "");
-					if (dirNameNoSep.includes(queryNoSep)) {
-						return true;
-					}
-
-					// Only use character-based fuzzy matching as last resort
-					const queryChars = queryNoSep.split("");
+				// If any of the search texts can match all query characters in order, include this directory
+				return searchTexts.some((searchText) => {
 					let queryIndex = 0;
 					for (
 						let i = 0;
-						i < dirNameNoSep.length && queryIndex < queryChars.length;
+						i < searchText.length && queryIndex < queryChars.length;
 						i++
 					) {
-						if (dirNameNoSep[i] === queryChars[queryIndex]) {
+						if (searchText[i] === queryChars[queryIndex]) {
 							queryIndex++;
 						}
 					}
 					return queryIndex === queryChars.length;
 				});
+			});
 
-				datasetToFilter =
-					potentialMatches.length <= maxDatasetSize
-						? potentialMatches
-						: potentialMatches
-								.sort((a, b) => a.fullPath.length - b.fullPath.length)
-								.slice(0, maxDatasetSize);
-			} else {
-				// For general queries, use the existing permissive character-based matching
-				const queryChars = query.toLowerCase().replace(/\s+/g, "").split("");
-
-				const potentialMatches = directories.filter((dir) => {
-					if (queryChars.length === 0) {
-						return true;
-					}
-
-					// Very permissive character-based matching for general queries
-					const searchTexts = [
-						`${dir.label} ${dir.fullPath}`
-							.toLowerCase()
-							.replace(/[\s\-_\.]/g, ""), // No separators
-						`${dir.label} ${dir.fullPath}`
-							.toLowerCase()
-							.replace(/[\-_\.]/g, " "), // Spaces instead of separators
-						`${dir.label} ${dir.fullPath}`.toLowerCase(), // Original
-						path
-							.basename(dir.fullPath)
-							.toLowerCase()
-							.replace(/[\s\-_\.]/g, ""), // Just dirname, no separators
-					];
-
-					// If any of the search texts can match all query characters in order, include this directory
-					return searchTexts.some((searchText) => {
-						let queryIndex = 0;
-						for (
-							let i = 0;
-							i < searchText.length && queryIndex < queryChars.length;
-							i++
-						) {
-							if (searchText[i] === queryChars[queryIndex]) {
-								queryIndex++;
-							}
-						}
-						return queryIndex === queryChars.length;
-					});
-				});
-
-				datasetToFilter =
-					potentialMatches.length <= maxDatasetSize
-						? potentialMatches
-						: potentialMatches
-								.sort((a, b) => a.fullPath.length - b.fullPath.length)
-								.slice(0, maxDatasetSize);
-			}
-		} else {
-			datasetToFilter = directories;
+			datasetToFilter =
+				potentialMatches.length <= maxDatasetSize
+					? potentialMatches
+					: potentialMatches
+							.sort((a, b) => a.fullPath.length - b.fullPath.length)
+							.slice(0, maxDatasetSize);
 		}
+		datasetToFilter = directories;
 		return new Promise((resolve) => {
 			// Prepare input for fzf: create enhanced searchable text optimized for fuzzy matching
 			const directoryMap = new Map<string, DirectoryItem>();
@@ -136,26 +88,18 @@ export class DirectoryFilter {
 				})
 				.join("\n"); // fzf arguments for enhanced fuzzy matching optimized for directory names
 			// Use different strategies based on query characteristics
-			const isSpecificQuery = query.length > 3 && !query.includes(" ");
 			const fzfArgs = [
 				"--filter",
 				query, // Non-interactive filtering mode
 				"--algo=v2", // Use optimal scoring algorithm
-			];
-
-			// For specific queries like "ripopen", use exact matching to be more restrictive
-			// For general queries, use fuzzy matching
-			if (isSpecificQuery) {
-				fzfArgs.push("--exact"); // Exact substring matching, more restrictive
-			}
-			fzfArgs.push(
-				"-i", // Case-insensitive matching
+				"+x", // Disable extended search to handle special characters (!, ^, $, etc.) as literals
+				// --literal doesn't work properly with ! at start of query (treated as negation)
 				"--delimiter",
 				" ", // Use space as delimiter
 				"--with-nth",
 				"2..", // Only search in text after the key
-				"--tiebreak=length,begin" // Prefer shorter matches and matches at the beginning
-			);
+				"--tiebreak=length,begin", // Prefer shorter matches and matches at the beginning
+			];
 
 			const fzfChild = spawn(fzfPath, fzfArgs, {
 				stdio: ["pipe", "pipe", "pipe"],
@@ -198,10 +142,35 @@ export class DirectoryFilter {
 							matchedDirectories.push(dir);
 						}
 					}
-				}); // Post-process results to improve hierarchical ranking
+				});
+
+				// Post-process results to improve hierarchical ranking
 				// Boost children of well-matched directories
+				// Include subdirectories of exact match folders when query matches a folder exactly
+				const queryLower = query.toLowerCase();
+				const exactParents = directories.filter(
+					(dir) => path.basename(dir.fullPath).toLowerCase() === queryLower
+				);
+				const matchedSet = new Set(matchedDirectories.map((d) => d.fullPath));
+				const extraChildren: DirectoryItem[] = [];
+				exactParents.forEach((parent) => {
+					const parentPath = parent.fullPath;
+					directories.forEach((dir) => {
+						if (
+							dir.fullPath.startsWith(parentPath + path.sep) &&
+							!matchedSet.has(dir.fullPath)
+						) {
+							extraChildren.push(dir);
+							matchedSet.add(dir.fullPath);
+						}
+					});
+				});
+
+				// Merge original matches with extra children before ranking
+				const finalMatches = matchedDirectories.concat(extraChildren);
+
 				const enhancedResults = DirectoryFilter.enhanceHierarchicalRanking(
-					matchedDirectories,
+					finalMatches,
 					query,
 					cacheManager
 				);
@@ -290,9 +259,28 @@ export class DirectoryFilter {
 			) {
 				return 1;
 			}
-
-			// Then by directory name length (shorter = more specific)
+			// Fallback to shorter name first
 			return aName.length - bName.length;
+		});
+
+		// Include subdirectories of exact match folders when query matches a folder exactly
+		const exactParents = directories.filter(
+			(dir) => path.basename(dir.fullPath).toLowerCase() === queryLower
+		);
+		const matchedSetFallback = new Set(
+			fallbackFiltered.map((item) => item.fullPath)
+		);
+		exactParents.forEach((parent) => {
+			const parentPath = parent.fullPath;
+			directories.forEach((dir) => {
+				if (
+					dir.fullPath.startsWith(parentPath + path.sep) &&
+					!matchedSetFallback.has(dir.fullPath)
+				) {
+					fallbackFiltered.push(dir);
+					matchedSetFallback.add(dir.fullPath);
+				}
+			});
 		});
 
 		return fallbackFiltered;
@@ -374,9 +362,8 @@ export class DirectoryFilter {
 				}
 			}
 
-			// Boost workspace files (high priority like git repos)
 			if (dir.itemType === ItemType.WorkspaceFile) {
-				score += 55; // Slightly higher than git repos for workspace files
+				score += 60; // Higher than git repos for workspace files
 			}
 
 			// Boost shorter paths (more specific)

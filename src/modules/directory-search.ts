@@ -522,7 +522,7 @@ export class DirectorySearcher {
 		// Extract directory paths and workspace files
 		for (const filePath of lines) {
 			if (filePath.trim()) {
-				if (includeWorkspaceFiles && filePath.endsWith('.code-workspace')) {
+				if (includeWorkspaceFiles && filePath.endsWith(".code-workspace")) {
 					workspaceFiles.add(filePath);
 				}
 				const dirPath = path.dirname(filePath);
@@ -550,7 +550,7 @@ export class DirectorySearcher {
 				const dirName = path.basename(dir);
 				const shouldExcludeDotFolders =
 					ConfigurationManager.shouldExcludeHomeDotFolders();
-				const isDotFolder = dirName.startsWith('.');
+				const isDotFolder = dirName.startsWith(".");
 				return !isDotFolder || !shouldExcludeDotFolders;
 			})
 			.map((fullPath) => ({
@@ -563,7 +563,7 @@ export class DirectorySearcher {
 		// Convert workspace files to DirectoryItem array
 		const workspaceItems: DirectoryItem[] = Array.from(workspaceFiles).map(
 			(fullPath) => ({
-				label: path.basename(fullPath, '.code-workspace'),
+				label: path.basename(fullPath, ".code-workspace"),
 				description: fullPath,
 				fullPath: fullPath,
 				itemType: ItemType.WorkspaceFile,
@@ -726,8 +726,7 @@ export class DirectorySearcher {
 				// Use fzf for enhanced sorting/ranking (filter mode)
 				// Using empty filter should return all items with fzf's ranking
 				const fzfArgs = [
-					"--filter",
-					"", // Filter with empty string (should match all)
+					"--filter", // Non-interactive filter mode
 					"--read0", // Read null-separated input
 					"--print0", // Use null separator for output
 					"--no-info", // Don't show info line
