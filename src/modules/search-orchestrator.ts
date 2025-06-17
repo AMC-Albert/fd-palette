@@ -51,18 +51,15 @@ export class SearchOrchestrator {
 			vscode.window.showErrorMessage(`ripgrep is not available: ${error}`);
 			return;
 		}
-
-		// Check if fzf is available and enabled
+		// Check if fzf is available
 		let useFzf = false;
-		if (searchParams.enableFzf) {
-			try {
-				await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
-				useFzf = true;
-				// Reduced logging verbosity
-			} catch (error) {
-				// fzf not available, using basic ripgrep search
-				useFzf = false;
-			}
+		try {
+			await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
+			useFzf = true;
+			// Reduced logging verbosity
+		} catch (error) {
+			// fzf not available, using basic ripgrep search
+			useFzf = false;
 		}
 
 		// Show a progress indicator while searching

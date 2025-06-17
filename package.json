@@ -90,13 +90,7 @@
 					},
 					"default": [],
 					"description": "List of search paths for directory search - first valid directory wins (leave empty to search from root)"
-				},
-				"ripOpen.maxDepth": {
-					"type": "number",
-					"default": 10,
-					"description": "Maximum search depth for ripgrep"
-				},
-				"ripOpen.excludePatterns": {
+				},				"ripOpen.excludePatterns": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -186,21 +180,15 @@
 					"type": "string",
 					"default": "auto",
 					"description": "Path to ripgrep executable (use 'auto' for automatic detection, 'rg' if in PATH, or specify full path)"
-				},
-				"ripOpen.fzfPath": {
+				},				"ripOpen.fzfPath": {
 					"type": "string",
 					"default": "fzf",
 					"description": "Path to fzf executable (use 'fzf' if in PATH)"
 				},
-				"ripOpen.enableFzf": {
-					"type": "boolean",
-					"default": true,
-					"description": "Enable fzf integration for improved fuzzy matching when available"
-				},
 				"ripOpen.fzfOptions": {
 					"type": "string",
-					"default": "--height=60% --layout=reverse --border --info=inline --cycle",
-					"description": "Additional options to pass to fzf for enhanced fuzzy matching"
+					"default": "--scheme=path --tiebreak=pathname,length --smart-case",
+					"description": "Additional options to pass to fzf for sorting and ranking behavior (e.g., '--scheme=path --tiebreak=pathname,length --smart-case')"
 				},
 				"ripOpen.enableCache": {
 					"type": "boolean",
@@ -221,22 +209,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Whether to open directories in a new window by default"
-				},
-				"ripOpen.uiDisplayLimit": {
+				},				"ripOpen.uiDisplayLimit": {
 					"type": "number",
 					"default": 100,
 					"description": "Maximum number of items to display in the UI before requiring filtering"
-				},
-				"ripOpen.includeHidden": {
-					"type": "boolean",
-					"default": true,
-					"description": "Include hidden files and directories in search (adds --hidden flag to ripgrep)"
-				},
-				"ripOpen.respectGitignore": {
-					"type": "boolean",
-					"default": false,
-					"description": "Respect .gitignore and other ignore files (removes --no-ignore flag from ripgrep)"
-				},				"ripOpen.boostGitDirectories": {
+				},"ripOpen.boostGitDirectories": {
 					"type": "boolean",
 					"default": true,
 					"description": "Give higher priority to directories that contain a .git folder (git repositories)"
@@ -245,14 +222,23 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Include .code-workspace files in search results with high priority"
-				},
-				"ripOpen.additionalRipgrepArgs": {
+				},				"ripOpen.additionalRipgrepArgs": {
 					"type": "array",
 					"items": {
 						"type": "string"
 					},
-					"default": [],
-					"description": "Additional command-line arguments to pass to ripgrep (e.g., ['--follow', '--case-sensitive'])"
+					"default": ["--max-depth=10", "--hidden", "--no-ignore"],
+					"description": "Additional command-line arguments to pass to ripgrep (e.g., ['--follow', '--case-sensitive', '--max-depth=5']). Default includes common useful options."
+				},
+				"ripOpen.fzfFilterArgs": {
+					"type": "string",
+					"default": "--filter --read0 --print0 --no-info --no-scrollbar",
+					"description": "Arguments to pass to fzf when used in filter mode for ranking results"
+				},
+				"ripOpen.excludeHomeDotFolders": {
+					"type": "boolean",
+					"default": true,
+					"description": "Exclude dot folders (folders starting with .) from search results"
 				}
 			}
 		}

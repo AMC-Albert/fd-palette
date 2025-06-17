@@ -86,7 +86,31 @@ export class DirectoryFilter {
 
 					return `${key} ${searchText}`;
 				})
-				.join("\n"); // fzf arguments for enhanced fuzzy matching optimized for directory names
+				.join("\n"); // fzf arguments for enhanced fuzzy matching optimized for directory names		// Get search parameters for fzf options
+			const searchParams = ConfigurationManager.getSearchParams();
+
+			// Extract useful options from fzfOptions (ignore incompatible ones for interactive mode)
+			const userFzfOptions = searchParams.fzfOptions
+				.split(" ")
+				.filter((arg: string) => {
+					const trimmedArg = arg.trim();
+					// Only include options that are compatible with filter mode and useful for ranking
+					return (
+						trimmedArg &&
+						!trimmedArg.startsWith("--layout") &&
+						!trimmedArg.startsWith("--height") &&
+						!trimmedArg.startsWith("--border") &&
+						!trimmedArg.startsWith("--info") &&
+						!trimmedArg.startsWith("--cycle") &&
+						(trimmedArg.startsWith("--scheme") ||
+							trimmedArg.startsWith("--tiebreak") ||
+							trimmedArg.startsWith("--smart-case") ||
+							trimmedArg.startsWith("--ignore-case") ||
+							trimmedArg.startsWith("--no-ignore-case") ||
+							trimmedArg.startsWith("--literal"))
+					);
+				});
+
 			// Use different strategies based on query characteristics
 			const fzfArgs = [
 				"--filter",
@@ -98,7 +122,8 @@ export class DirectoryFilter {
 				" ", // Use space as delimiter
 				"--with-nth",
 				"2..", // Only search in text after the key
-				"--tiebreak=length,begin", // Prefer shorter matches and matches at the beginning
+				"--tiebreak=length,begin", // Prefer shorter matches and matches at the beginning (fallback if user doesn't specify)
+				...userFzfOptions, // Add compatible user options
 			];
 
 			const fzfChild = spawn(fzfPath, fzfArgs, {

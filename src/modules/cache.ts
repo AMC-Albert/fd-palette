@@ -71,10 +71,13 @@ export class CacheManager {
 		const basePath = cacheDir || this.getCacheDir();
 		return path.join(basePath, `cache_${hash.substring(0, 16)}.json`);
 	}
-
 	private getCacheKey(searchParams: SearchParams): string {
-		const { searchPath, maxDepth, excludePatterns } = searchParams;
-		return JSON.stringify({ searchPath, maxDepth, excludePatterns });
+		const { searchPath, excludePatterns, additionalRipgrepArgs } = searchParams;
+		return JSON.stringify({
+			searchPath,
+			excludePatterns,
+			additionalRipgrepArgs,
+		});
 	}
 	cleanupOldCacheFiles(): void {
 		try {
@@ -304,18 +307,14 @@ export class CacheManager {
 			const { DirectorySearcher } = await import("./directory-search.js");
 
 			// Check if ripgrep is available
-			const rgPath = await DirectorySearcher.checkRipgrepAvailability();
-
-			// Check if fzf is available and enabled
+			const rgPath = await DirectorySearcher.checkRipgrepAvailability(); // Check if fzf is available
 			let useFzf = false;
-			if (searchParams.enableFzf) {
-				try {
-					await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
-					useFzf = true;
-				} catch (error) {
-					// Fzf not available, use basic ripgrep
-					useFzf = false;
-				}
+			try {
+				await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
+				useFzf = true;
+			} catch (error) {
+				// Fzf not available, use basic ripgrep
+				useFzf = false;
 			}
 
 			// Create a cancellation token for the background search

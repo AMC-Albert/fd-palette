@@ -10,24 +10,20 @@ export class ConfigurationManager {
 
 	static setExtensionContext(context: vscode.ExtensionContext): void {
 		this._extensionContext = context;
-	}
-	static getSearchParams(): SearchParams {
+	}	static getSearchParams(): SearchParams {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-		const searchPaths = config.get<string[]>("searchPath") || [];
-		return {
+		const searchPaths = config.get<string[]>("searchPath") || [];		return {
 			searchPath: searchPaths,
-			maxDepth: config.get<number>("maxDepth") || 5,
 			excludePatterns: config.get<string[]>("excludePatterns") || [],
 			ripgrepPath: config.get<string>("ripgrepPath") || "auto",
 			fzfPath: config.get<string>("fzfPath") || "fzf",
-			enableFzf: config.get<boolean>("enableFzf") ?? true,
 			fzfOptions:
 				config.get<string>("fzfOptions") ||
-				"--height=60% --layout=reverse --border --info=inline --cycle",
-			includeHidden: config.get<boolean>("includeHidden") ?? true,
-			respectGitignore: config.get<boolean>("respectGitignore") ?? false,
+				"--scheme=path --tiebreak=pathname,length --smart-case",
+			fzfFilterArgs: config.get<string>("fzfFilterArgs") || 
+				"--filter --read0 --print0 --no-info --no-scrollbar",
 			additionalRipgrepArgs:
-				config.get<string[]>("additionalRipgrepArgs") || [],
+				config.get<string[]>("additionalRipgrepArgs") || ["--max-depth=10", "--hidden", "--no-ignore"],
 			boostGitDirectories: config.get<boolean>("boostGitDirectories") ?? true,
 			includeWorkspaceFiles:
 				config.get<boolean>("includeWorkspaceFiles") ?? true,
@@ -185,20 +181,26 @@ export class ConfigurationManager {
 			{ modal: true },
 			"Reset Settings",
 			"Cancel"
-		);
-		if (choice !== "Reset Settings") {
+		);		if (choice !== "Reset Settings") {
 			return;
-		} // Reset all settings to undefined (which restores defaults)
+		}
+		// Reset all settings to undefined (which restores defaults)
 		const settingsToReset = [
 			"searchPath",
-			"maxDepth",
 			"excludePatterns",
+			"ripgrepPath",
+			"fzfPath",
+			"fzfOptions",
 			"enableCache",
 			"cacheDurationMinutes",
 			"enableBackgroundRefresh",
 			"openInWindow",
 			"excludeHomeDotFolders",
 			"uiDisplayLimit",
+			"boostGitDirectories",
+			"includeWorkspaceFiles",
+			"additionalRipgrepArgs",
+			"fzfFilterArgs",
 		];
 
 		try {

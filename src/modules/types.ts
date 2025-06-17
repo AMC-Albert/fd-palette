@@ -19,14 +19,11 @@ export interface CacheEntry {
 
 export interface SearchParams {
 	searchPath: string[];
-	maxDepth: number;
 	excludePatterns: string[];
 	ripgrepPath: string;
 	fzfPath: string;
-	enableFzf: boolean;
 	fzfOptions: string;
-	includeHidden: boolean;
-	respectGitignore: boolean;
+	fzfFilterArgs: string;
 	additionalRipgrepArgs: string[];
 	boostGitDirectories: boolean;
 	includeWorkspaceFiles: boolean;
