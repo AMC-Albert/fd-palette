@@ -10,9 +10,11 @@ export class ConfigurationManager {
 
 	static setExtensionContext(context: vscode.ExtensionContext): void {
 		this._extensionContext = context;
-	}	static getSearchParams(): SearchParams {
+	}
+	static getSearchParams(): SearchParams {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-		const searchPaths = config.get<string[]>("searchPath") || [];		return {
+		const searchPaths = config.get<string[]>("searchPath") || [];
+		return {
 			searchPath: searchPaths,
 			excludePatterns: config.get<string[]>("excludePatterns") || [],
 			ripgrepPath: config.get<string>("ripgrepPath") || "auto",
@@ -20,10 +22,14 @@ export class ConfigurationManager {
 			fzfOptions:
 				config.get<string>("fzfOptions") ||
 				"--scheme=path --tiebreak=pathname,length --smart-case",
-			fzfFilterArgs: config.get<string>("fzfFilterArgs") || 
+			fzfFilterArgs:
+				config.get<string>("fzfFilterArgs") ||
 				"--filter --read0 --print0 --no-info --no-scrollbar",
-			additionalRipgrepArgs:
-				config.get<string[]>("additionalRipgrepArgs") || ["--max-depth=10", "--hidden", "--no-ignore"],
+			additionalRipgrepArgs: config.get<string[]>("additionalRipgrepArgs") || [
+				"--max-depth=10",
+				"--hidden",
+				"--no-ignore",
+			],
 			boostGitDirectories: config.get<boolean>("boostGitDirectories") ?? true,
 			includeWorkspaceFiles:
 				config.get<boolean>("includeWorkspaceFiles") ?? true,
@@ -141,16 +147,12 @@ export class ConfigurationManager {
 			const stats = await fs.promises.stat(dirPath);
 			return stats.isDirectory();
 		} catch {
-			return false;		}
+			return false;
+		}
 	}
-
 	static isCacheEnabled(): boolean {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return config.get<boolean>("enableCache") ?? true;
-	}
-	static shouldopenInWindow(): boolean {
-		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-		return config.get<boolean>("openInWindow") ?? true;
 	}
 	static shouldExcludeHomeDotFolders(): boolean {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
@@ -174,18 +176,19 @@ export class ConfigurationManager {
 			{ modal: true },
 			"Reset Settings",
 			"Cancel"
-		);		if (choice !== "Reset Settings") {
+		);
+		if (choice !== "Reset Settings") {
 			return;
 		}
 		// Reset all settings to undefined (which restores defaults)
 		const settingsToReset = [
 			"searchPath",
 			"excludePatterns",
-			"ripgrepPath",			"fzfPath",
+			"ripgrepPath",
+			"fzfPath",
 			"fzfOptions",
 			"enableCache",
 			"enableBackgroundRefresh",
-			"openInWindow",
 			"excludeHomeDotFolders",
 			"uiDisplayLimit",
 			"boostGitDirectories",

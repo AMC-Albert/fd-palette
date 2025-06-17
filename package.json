@@ -202,11 +202,6 @@
 					"default": true,
 					"description": "Enable background cache refresh for better performance (automatically refreshes expired cache in background)"
 				},
-				"ripOpen.openInWindow": {
-					"type": "boolean",
-					"default": true,
-					"description": "Whether to open directories in a new window by default"
-				},
 				"ripOpen.uiDisplayLimit": {
 					"type": "number",
 					"default": 100,

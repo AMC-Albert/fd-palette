@@ -80,5 +80,4 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 - Large datasets (>5000 directories) automatically fallback to basic sorting.
 - fzf filtering is triggered automatically when search results narrow down.
 - Background cache refresh maintains responsiveness for subsequent searches.
-- 10-second buffer prevents excessive cache refreshing during rapid searches.
 - Memory and file-based caching optimize repeated searches.
