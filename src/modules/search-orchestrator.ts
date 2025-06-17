@@ -90,10 +90,14 @@ export class SearchOrchestrator {
 								token
 						  )
 						: await DirectorySearcher.findDirectories(searchParams, token);
-
 					if (directories.length === 0) {
 						const noResultsMessage = `No directories found using ${searchMethodName}.`;
-						vscode.window.showInformationMessage(noResultsMessage);
+						vscode.window.showInformationMessage(noResultsMessage, {
+							modal: false,
+						});
+						setTimeout(() => {
+							vscode.commands.executeCommand("workbench.action.closeMessages");
+						}, 3000);
 						return;
 					}
 

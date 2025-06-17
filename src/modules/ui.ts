@@ -6,7 +6,8 @@ import { ConfigurationManager } from "./configuration";
 import { DirectorySearcher } from "./directory-search";
 import { DirectoryFilter } from "./filter";
 
-export class DirectoryPicker {	static async showDirectoryPicker(
+export class DirectoryPicker {
+	static async showDirectoryPicker(
 		directories: DirectoryItem[],
 		action: DirectoryAction = DirectoryAction.AddToWorkspace,
 		forceNewWindow: boolean = false
@@ -140,6 +141,7 @@ export class DirectoryPicker {	static async showDirectoryPicker(
 				updatePlaceholder();
 			}
 		});
+
 		// Handle acceptance
 		quickPick.onDidAccept(async () => {
 			const selectedItems = [...quickPick.selectedItems];
@@ -157,9 +159,13 @@ export class DirectoryPicker {	static async showDirectoryPicker(
 			if (itemsToProcess.length > 0) {
 				try {
 					if (action === DirectoryAction.AddToWorkspace) {
-						await WorkspaceManager.addDirectoriesToWorkspace(itemsToProcess);					} else {
+						await WorkspaceManager.addDirectoriesToWorkspace(itemsToProcess);
+					} else {
 						// For OpenInWindow action, use the forceNewWindow parameter
-						await WorkspaceManager.openDirectoriesInNewWindow(itemsToProcess, forceNewWindow);
+						await WorkspaceManager.openDirectoriesInNewWindow(
+							itemsToProcess,
+							forceNewWindow
+						);
 					}
 				} catch (error) {
 					const actionText =
@@ -169,7 +175,12 @@ export class DirectoryPicker {	static async showDirectoryPicker(
 					);
 				}
 			} else {
-				vscode.window.showInformationMessage("No directory selected.");
+				vscode.window.showInformationMessage("No directory selected.", {
+					modal: false,
+				});
+				setTimeout(() => {
+					vscode.commands.executeCommand("workbench.action.closeMessages");
+				}, 2000);
 			}
 
 			quickPick.dispose();

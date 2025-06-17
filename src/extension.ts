@@ -4,6 +4,7 @@ import {
 	CacheManager,
 	ConfigurationManager,
 	DirectorySearcher,
+	WorkspaceManager,
 } from "./modules";
 
 let searchOrchestrator: SearchOrchestrator;
@@ -52,43 +53,25 @@ export function activate(context: vscode.ExtensionContext) {
 			cacheManager.clearCache();
 		}
 	);
-
 	const resetSettingsCommand = vscode.commands.registerCommand(
 		"rip-open.resetSettings",
 		async () => {
 			await ConfigurationManager.resetSettingsToDefault();
 		}
 	);
-
-	// Register configuration change listener
-	const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
-		// Check if any ripgrep-related settings changed
-		const ripgrepSettings = [
-			'ripOpen.includeHidden',
-			'ripOpen.respectGitignore',
-			'ripOpen.additionalRipgrepArgs',
-			'ripOpen.maxDepth',
-			'ripOpen.excludePatterns',
-			'ripOpen.searchPath'
-		];
-
-		const ripgrepSettingsChanged = ripgrepSettings.some(setting => 
-			event.affectsConfiguration(setting)
-		);
-
-		if (ripgrepSettingsChanged) {
-			console.log('rip-open: Ripgrep configuration changed, clearing cache');
-			cacheManager.clearCacheOnConfigChange();
+	const removeSelectedFolderCommand = vscode.commands.registerCommand(
+		"rip-open.removeSelectedFolder",
+		async () => {
+			await WorkspaceManager.removeSelectedFolder();
 		}
-	});
-
+	);
 	context.subscriptions.push(
 		addToWorkspaceCommand,
 		openInCurrentWindowCommand,
 		openInNewWindowCommand,
 		clearCacheCommand,
 		resetSettingsCommand,
-		configChangeDisposable
+		removeSelectedFolderCommand
 	);
 }
 

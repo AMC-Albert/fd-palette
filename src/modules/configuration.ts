@@ -214,14 +214,11 @@ export class ConfigurationManager {
 		);
 		if (choice !== "Reset Settings") {
 			return;
-		}		// Reset all settings to undefined (which restores defaults)
+		} // Reset all settings to undefined (which restores defaults)
 		const settingsToReset = [
 			"searchPath",
 			"maxDepth",
 			"excludePatterns",
-			"includeHidden",
-			"respectGitignore",
-			"additionalRipgrepArgs",
 			"enableCache",
 			"cacheDurationMinutes",
 			"enableBackgroundRefresh",
@@ -236,10 +233,13 @@ export class ConfigurationManager {
 					config.update(setting, undefined, vscode.ConfigurationTarget.Global)
 				)
 			);
-
 			vscode.window.showInformationMessage(
-				"rip-open settings have been reset to default values."
+				"rip-open settings have been reset to default values.",
+				{ modal: false }
 			);
+			setTimeout(() => {
+				vscode.commands.executeCommand("workbench.action.closeMessages");
+			}, 3000);
 		} catch (error) {
 			vscode.window.showErrorMessage(`Failed to reset settings: ${error}`);
 		}
