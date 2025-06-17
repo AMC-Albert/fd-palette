@@ -110,15 +110,12 @@ export class DirectorySearcher {
 				throw new Error("ripgrep command failed (cached result)");
 			}
 		}
-
-		console.log("rip-open: ripgrep availability cache MISS, checking...");
+		// ripgrep availability cache MISS, checking...
 
 		// Not cached, check availability
 		try {
 			const rgPath = await this._getAvailableRipgrepPath();
-			console.log(
-				`rip-open: ripgrep availability check passed, caching result: ${rgPath}`
-			);
+			// ripgrep availability check passed, caching result
 
 			// Cache the successful result (no timestamp needed)
 			await this._extensionContext.globalState.update(cacheKey, {
@@ -533,26 +530,22 @@ export class DirectorySearcher {
 				const dirPath = path.dirname(filePath);
 				directories.add(dirPath);
 			}
-		}
-
-		console.log(
-			`rip-open: Found ${directories.size} unique directories before filtering`
-		);
+		} // Found directories before filtering (reduced verbosity)
 		// Sample some directories for debugging
-		const sampleDirs = Array.from(directories).slice(0, 10);
-		console.log(`rip-open: Sample directories: ${sampleDirs.join(", ")}`);
+		// const sampleDirs = Array.from(directories).slice(0, 10);
+		// console.log(`rip-open: Sample directories: ${sampleDirs.join(", ")}`);
 
 		// Look specifically for underscore directories
-		const underscoreDirs = Array.from(directories).filter((dir) =>
-			dir.includes("_")
-		);
-		console.log(
-			`rip-open: Found ${
-				underscoreDirs.length
-			} directories containing underscores: ${underscoreDirs
-				.slice(0, 5)
-				.join(", ")}`
-		);
+		// const underscoreDirs = Array.from(directories).filter((dir) =>
+		// 	dir.includes("_")
+		// );
+		// console.log(
+		// 	`rip-open: Found ${
+		// 		underscoreDirs.length
+		// 	} directories containing underscores: ${underscoreDirs
+		// 		.slice(0, 5)
+		// 		.join(", ")}`
+		// );
 
 		// Convert to DirectoryItem array and sort
 		const directoryItems: DirectoryItem[] = Array.from(directories)
@@ -563,9 +556,8 @@ export class DirectorySearcher {
 					ConfigurationManager.shouldExcludeHomeDotFolders();
 				const isDotFolder = dirName.startsWith(".");
 				const shouldInclude = !isDotFolder || !shouldExcludeDotFolders;
-
 				if (!shouldInclude) {
-					console.log(`rip-open: Filtering out dot folder: ${dir}`);
+					// Filtering out dot folder (reduced verbosity)
 				}
 
 				return shouldInclude;
@@ -576,10 +568,7 @@ export class DirectorySearcher {
 				fullPath: fullPath,
 			}))
 			.sort((a, b) => a.label.localeCompare(b.label));
-
-		console.log(
-			`rip-open: Final directory count after filtering: ${directoryItems.length}`
-		);
+		// Final directory count after filtering (reduced verbosity)
 
 		return directoryItems;
 	}

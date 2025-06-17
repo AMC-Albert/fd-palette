@@ -17,6 +17,7 @@ When fzf is available and actively filtering, visual indicators show match quali
 - `★` - Excellent fuzzy matches (top 10% of results).
 - `•` - Good matches (top 30% of results).
 - `·` - Fair matches (top 70% of results).
+- `$(git-branch)` - Git repositories (when git repo boost enabled).
 - Standard VS Code letter highlighting for basic matches.
 
 Large datasets automatically use VS Code's built-in fuzzy matching without quality indicators.
@@ -64,13 +65,13 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 
 ## Commands
 
-| Command | Default Keybinding | Description |
-|---------|-------------------|-------------|
-| `Rip Open: Add Directories to Workspace` | `Ctrl+Alt+D` | Search and add to workspace |
-| `Rip Open: Open Directory in Current Window` | `Ctrl+Alt+O` | Search and open in current window |
-| `Rip Open: Open Directory in New Window` | `Ctrl+Alt+Shift+O` | Search and open in new window |
-| `Rip Open: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del` | Remove selected folder from workspace |
-| `Rip Open: Clear Search Cache` | - | Force cache refresh |
+| Command                                           | Default Keybinding | Description                           |
+| ------------------------------------------------- | ------------------ | ------------------------------------- |
+| `Rip Open: Add Directories to Workspace`          | `Ctrl+Alt+D`       | Search and add to workspace           |
+| `Rip Open: Open Directory in Current Window`      | `Ctrl+Alt+O`       | Search and open in current window     |
+| `Rip Open: Open Directory in New Window`          | `Ctrl+Alt+Shift+O` | Search and open in new window         |
+| `Rip Open: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace |
+| `Rip Open: Clear Search Cache`                    | -                  | Force cache refresh                   |
 
 ## Performance Notes
 

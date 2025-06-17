@@ -22,6 +22,7 @@ export interface SearchParams {
 	includeHidden: boolean;
 	respectGitignore: boolean;
 	additionalRipgrepArgs: string[];
+	boostGitDirectories: boolean;
 }
 
 export enum DirectoryAction {

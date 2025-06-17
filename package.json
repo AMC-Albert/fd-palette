@@ -237,6 +237,11 @@
 					"default": false,
 					"description": "Respect .gitignore and other ignore files (removes --no-ignore flag from ripgrep)"
 				},
+				"ripOpen.boostGitDirectories": {
+					"type": "boolean",
+					"default": true,
+					"description": "Give higher priority to directories that contain a .git folder (git repositories)"
+				},
 				"ripOpen.additionalRipgrepArgs": {
 					"type": "array",
 					"items": {

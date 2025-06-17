@@ -5,12 +5,14 @@ import { WorkspaceManager } from "./workspace";
 import { ConfigurationManager } from "./configuration";
 import { DirectorySearcher } from "./directory-search";
 import { DirectoryFilter } from "./filter";
+import { CacheManager } from "./cache";
 
 export class DirectoryPicker {
 	static async showDirectoryPicker(
 		directories: DirectoryItem[],
 		action: DirectoryAction = DirectoryAction.AddToWorkspace,
-		forceNewWindow: boolean = false
+		forceNewWindow: boolean = false,
+		cacheManager?: CacheManager
 	): Promise<void> {
 		// Check if fzf is available for enhanced filtering
 		const isFzfEnabled = ConfigurationManager.isFzfEnabled();
@@ -35,6 +37,8 @@ export class DirectoryPicker {
 			// When using fzf, disable VS Code's filtering and sorting to maintain fzf's superior ranking
 			quickPick.matchOnDescription = false;
 			quickPick.matchOnDetail = false;
+			// Disable any automatic sorting behavior
+			(quickPick as any).sortByLabel = false;
 
 			// Transform directories to preserve fzf ordering
 			displayDirectories = directories.map((dir, index) => ({
@@ -88,31 +92,53 @@ export class DirectoryPicker {
 							const filtered = await DirectoryFilter.filterWithFzf(
 								directories,
 								value,
-								fzfPath
+								fzfPath,
+								cacheManager
 							); // Add subtle indicators for match quality without disrupting sorting
 							const enhancedResults = filtered.map((dir, index) => {
-								// Calculate a simple match quality score based on fzf ranking
-								const matchQuality = Math.max(0, 1 - index / filtered.length);
+								// Calculate quality indicator based on final ranking position (after enhanced scoring)								// Items that appear first after enhanced ranking get better indicators
+								const finalPosition = index;
+								const totalResults = filtered.length;
+								const positionQuality = Math.max(
+									0,
+									1 - finalPosition / totalResults
+								); // Debug: log the first few items to verify ordering (reduced verbosity)
+								// if (index < 3) {
+								// 	console.log(
+								// 		`rip-open: UI item ${index}: ${dir.label} at ${dir.fullPath}`
+								// 	);
+								// }// Check if this is a git repository
+								const isGitRepo = cacheManager
+									? cacheManager.isGitRepository(dir.fullPath)
+									: false;
+
 								const qualityIndicator =
-									matchQuality > 0.9
+									positionQuality > 0.9
 										? "★"
-										: matchQuality > 0.7
+										: positionQuality > 0.7
 										? "•"
-										: matchQuality > 0.3
+										: positionQuality > 0.3
 										? "·"
 										: "";
 
-								// Keep original label clean, put quality indicator in description
+								// Use alternative git icon and place it at the beginning of the label
+								const gitIndicator = isGitRepo ? "$(source-control) " : "";
+
+								// Combine git indicator with the original label
+								const enhancedLabel = `${gitIndicator}${dir.label}`;
+
+								// Keep quality indicator in description
 								const originalDescription = dir.description || dir.fullPath;
 								const enhancedDescription = qualityIndicator
 									? `${qualityIndicator} ${originalDescription}`
 									: originalDescription;
-
 								return {
 									...dir,
+									label: enhancedLabel,
 									description: enhancedDescription,
 									alwaysShow: true, // Bypass VS Code's filtering
 									sortText: `${String(index).padStart(6, "0")}`, // Maintain fzf order with proper padding
+									filterText: `${String(index).padStart(6, "0")}_${dir.label}`, // Ensure VS Code respects our order
 								};
 							});
 							quickPick.items = enhancedResults;
@@ -124,7 +150,7 @@ export class DirectoryPicker {
 					} finally {
 						isFilteringInProgress = false;
 					}
-				}, 150); // 150ms debounce
+				}, 50); // 50ms debounce - faster response
 			} else {
 				// Use VS Code's built-in filtering (traditional behavior)
 				if (value.trim() !== "" && shouldLimitInitialDisplay) {

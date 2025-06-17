@@ -16,6 +16,11 @@ export class CacheManager {
 	private backgroundRefreshes = new Map<string, Promise<void>>();
 	private refreshDebounceTimers = new Map<string, NodeJS.Timeout>();
 
+	// Git repository cache for performance optimization
+	private gitRepoCache = new Map<string, boolean>();
+	private gitCacheTimestamp = 0;
+	private readonly GIT_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 	constructor(private extensionContext: vscode.ExtensionContext) {
 		// Initialize cache directory early
 		try {
@@ -169,18 +174,14 @@ export class CacheManager {
 	}
 	getCachedDirectories(searchParams: SearchParams): DirectoryItem[] | null {
 		if (!ConfigurationManager.isCacheEnabled()) {
-			console.log("rip-open: Cache disabled, returning null");
+			// Cache disabled, returning null
 			return null;
 		}
 
 		const cacheKey = this.getCacheKey(searchParams);
 		const entry = this.memoryCache.get(cacheKey);
-
 		if (!entry) {
-			console.log(
-				"rip-open: Cache MISS - no entry found for key:",
-				cacheKey.substring(0, 50) + "..."
-			);
+			// Cache MISS - no entry found
 			return null;
 		}
 
@@ -188,17 +189,10 @@ export class CacheManager {
 		const age = Date.now() - entry.timestamp;
 		const maxAge = ConfigurationManager.getCacheDuration();
 		const isExpired = age > maxAge;
-
 		if (isExpired) {
-			console.log(
-				`rip-open: Cache EXPIRED (${Math.round(
-					age / 1000 / 60
-				)}min old) - using stale cache, will refresh in background`
-			);
+			// Cache EXPIRED - using stale cache, will refresh in background
 		} else {
-			console.log(
-				`rip-open: Cache HIT - returning ${entry.directories.length} directories from memory cache`
-			);
+			// Cache HIT - returning directories from memory cache
 		}
 
 		return entry.directories;
@@ -293,8 +287,7 @@ export class CacheManager {
 		this.backgroundRefreshes.set(cacheKey, refreshPromise);
 
 		try {
-			await refreshPromise;
-			console.log("rip-open: Background cache refresh completed successfully");
+			await refreshPromise; // Background cache refresh completed successfully
 		} catch (error) {
 			console.error("rip-open: Background cache refresh failed:", error);
 		} finally {
@@ -541,5 +534,70 @@ export class CacheManager {
 		console.log(
 			"rip-open: CacheManager disposed, cleared all pending refresh timers"
 		);
+	}
+
+	/**
+	 * Check if a directory is a git repository (with caching)
+	 */
+	isGitRepository(dirPath: string): boolean {
+		// Check if cache is still valid
+		const now = Date.now();
+		if (now - this.gitCacheTimestamp > this.GIT_CACHE_DURATION) {
+			// Cache expired, clear it
+			this.gitRepoCache.clear();
+			this.gitCacheTimestamp = now;
+		}
+
+		// Check cache first
+		if (this.gitRepoCache.has(dirPath)) {
+			return this.gitRepoCache.get(dirPath)!;
+		}
+
+		// Check filesystem and cache result
+		try {
+			const gitPath = path.join(dirPath, ".git");
+			const isGitRepo = fs.existsSync(gitPath);
+			this.gitRepoCache.set(dirPath, isGitRepo);
+			return isGitRepo;
+		} catch (error) {
+			// Cache negative result for failed checks
+			this.gitRepoCache.set(dirPath, false);
+			return false;
+		}
+	}
+
+	/**
+	 * Batch check git repositories for multiple directories (async for better performance)
+	 */
+	async batchCheckGitRepositories(
+		directories: DirectoryItem[]
+	): Promise<Map<string, boolean>> {
+		const results = new Map<string, boolean>();
+
+		// Process in batches to avoid overwhelming the filesystem
+		const BATCH_SIZE = 50;
+		for (let i = 0; i < directories.length; i += BATCH_SIZE) {
+			const batch = directories.slice(i, i + BATCH_SIZE);
+
+			// Process batch
+			for (const dir of batch) {
+				results.set(dir.fullPath, this.isGitRepository(dir.fullPath));
+			}
+
+			// Small delay between batches to avoid blocking the UI
+			if (i + BATCH_SIZE < directories.length) {
+				await new Promise((resolve) => setTimeout(resolve, 1));
+			}
+		}
+
+		return results;
+	}
+
+	/**
+	 * Clear git repository cache
+	 */
+	clearGitCache(): void {
+		this.gitRepoCache.clear();
+		this.gitCacheTimestamp = 0;
 	}
 }

@@ -1,6 +1,9 @@
 import * as path from "path";
+import * as fs from "fs";
 import { spawn } from "child_process";
 import { DirectoryItem } from "./types";
+import { ConfigurationManager } from "./configuration";
+import { CacheManager } from "./cache";
 
 export class DirectoryFilter {
 	/**
@@ -9,13 +12,14 @@ export class DirectoryFilter {
 	static async filterWithFzf(
 		directories: DirectoryItem[],
 		query: string,
-		fzfPath: string
+		fzfPath: string,
+		cacheManager?: CacheManager
 	): Promise<DirectoryItem[]> {
 		// Early return for very short queries - fzf isn't effective with single characters
 		if (query.trim().length < 2) {
 			return directories;
 		} // Limit dataset size for performance - fzf can be slow with very large datasets
-		const maxDatasetSize = 5000; // Increase limit since fzf is quite fast
+		const maxDatasetSize = 3000; // Reduced for faster performance
 		let datasetToFilter: DirectoryItem[];
 		if (directories.length > maxDatasetSize) {
 			// For very large datasets, we need some pre-filtering
@@ -144,11 +148,11 @@ export class DirectoryFilter {
 			if (isSpecificQuery) {
 				fzfArgs.push("--exact"); // Exact substring matching, more restrictive
 			}
-
 			fzfArgs.push(
 				"-i", // Case-insensitive matching
 				"--delimiter",
-				" ", // Use space as delimiter				"--with-nth",
+				" ", // Use space as delimiter
+				"--with-nth",
 				"2..", // Only search in text after the key
 				"--tiebreak=length,begin" // Prefer shorter matches and matches at the beginning
 			);
@@ -194,13 +198,12 @@ export class DirectoryFilter {
 							matchedDirectories.push(dir);
 						}
 					}
-				});
-
-				// Post-process results to improve hierarchical ranking
+				}); // Post-process results to improve hierarchical ranking
 				// Boost children of well-matched directories
 				const enhancedResults = DirectoryFilter.enhanceHierarchicalRanking(
 					matchedDirectories,
-					query
+					query,
+					cacheManager
 				);
 				resolve(enhancedResults);
 			});
@@ -315,13 +318,13 @@ export class DirectoryFilter {
 			return queryParts.every((part) => searchText.includes(part));
 		});
 	}
-
 	/**
 	 * Enhance hierarchical ranking by boosting children of well-matched directories
 	 */
 	static enhanceHierarchicalRanking(
 		directories: DirectoryItem[],
-		query: string
+		query: string,
+		cacheManager?: CacheManager
 	): DirectoryItem[] {
 		if (directories.length === 0) {
 			return directories;
@@ -332,8 +335,10 @@ export class DirectoryFilter {
 		const queryParts = queryLower
 			.split(/\s+/)
 			.filter((part) => part.length > 0);
-
 		// Score each directory based on how well it matches the query
+		const searchParams = ConfigurationManager.getSearchParams();
+		const shouldBoostGitDirs = searchParams.boostGitDirectories;
+
 		const scoredDirectories = directories.map((dir, originalIndex) => {
 			const dirName = path.basename(dir.fullPath).toLowerCase();
 			const normalizedDirName = dirName.replace(/[-_]/g, " ");
@@ -357,6 +362,16 @@ export class DirectoryFilter {
 			);
 			if (allPartsInDirName) {
 				score += 30;
+			} // Boost git repositories (directories containing .git folder)
+			if (shouldBoostGitDirs && cacheManager) {
+				try {
+					if (cacheManager.isGitRepository(dir.fullPath)) {
+						score += 50; // Strong boost for git repositories - higher than most other boosts
+						// Debug log removed for reduced verbosity
+					}
+				} catch (error) {
+					// Ignore filesystem errors - just skip the boost
+				}
 			}
 
 			// Boost shorter paths (more specific)
@@ -394,15 +409,36 @@ export class DirectoryFilter {
 				...item,
 				score: enhancedScore,
 			};
-		});
-
-		// Sort by enhanced score (descending), then by original fzf order
+		}); // Sort by enhanced score (descending), then prefer git repos, then by original fzf order
 		enhancedScores.sort((a, b) => {
 			if (a.score !== b.score) {
 				return b.score - a.score;
 			}
+
+			// Tie-breaker: prefer git repositories
+			if (shouldBoostGitDirs && cacheManager) {
+				const aIsGit = cacheManager.isGitRepository(a.directory.fullPath);
+				const bIsGit = cacheManager.isGitRepository(b.directory.fullPath);
+				if (aIsGit && !bIsGit) {
+					return -1;
+				}
+				if (!aIsGit && bIsGit) {
+					return 1;
+				}
+			}
+
 			return a.originalIndex - b.originalIndex;
 		});
+		// Debug: show top scored directories (reduced verbosity)
+		// console.log("rip-open: Top 5 scored directories:");
+		// enhancedScores.slice(0, 5).forEach((item, index) => {
+		// 	const isGit = cacheManager
+		// 		? cacheManager.isGitRepository(item.directory.fullPath)
+		// 		: false;
+		// 	console.log(
+		// 		`  ${index}: score=${item.score}, git=${isGit}, path=${item.directory.fullPath}`
+		// 	);
+		// });
 
 		return enhancedScores.map((item) => item.directory);
 	}

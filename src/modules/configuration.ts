@@ -28,6 +28,7 @@ export class ConfigurationManager {
 			respectGitignore: config.get<boolean>("respectGitignore") ?? false,
 			additionalRipgrepArgs:
 				config.get<string[]>("additionalRipgrepArgs") || [],
+			boostGitDirectories: config.get<boolean>("boostGitDirectories") ?? true,
 		};
 	}
 
