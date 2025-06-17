@@ -2,6 +2,11 @@
 
 System-wide directory search and workspace management using [ripgrep](https://github.com/BurntSushi/ripgrep) and [fzf](https://github.com/junegunn/fzf).
 
+## Requirements
+
+- **ripgrep**: Comes bundled with VS Code (auto-detected).
+- **fzf** (optional but highly reccommended): Enhanced fuzzy matching and ranking.
+
 ## Features
 
 - **Fast directory discovery**: Uses ripgrep to find directories across specified search paths.
@@ -21,11 +26,6 @@ When fzf is available and actively filtering, visual indicators show match quali
 - Standard VS Code letter highlighting for basic matches.
 
 Large datasets automatically use VS Code's built-in fuzzy matching without quality indicators.
-
-## Requirements
-
-- **ripgrep**: Bundled with VS Code (auto-detected) or install separately.
-- **fzf** (optional): Enhanced fuzzy matching and ranking.
 
 ## Configuration
 

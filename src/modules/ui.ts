@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { DirectoryItem, DirectoryAction } from "./types";
+import { DirectoryItem, DirectoryAction, ItemType } from "./types";
 import { WorkspaceManager } from "./workspace";
 import { ConfigurationManager } from "./configuration";
 import { DirectorySearcher } from "./directory-search";
@@ -107,10 +107,13 @@ export class DirectoryPicker {
 								// 	console.log(
 								// 		`rip-open: UI item ${index}: ${dir.label} at ${dir.fullPath}`
 								// 	);
-								// }// Check if this is a git repository
+								// }								// Check if this is a git repository
 								const isGitRepo = cacheManager
 									? cacheManager.isGitRepository(dir.fullPath)
 									: false;
+
+								// Check if this is a workspace file
+								const isWorkspaceFile = dir.itemType === ItemType.WorkspaceFile;
 
 								const qualityIndicator =
 									positionQuality > 0.9
@@ -121,11 +124,16 @@ export class DirectoryPicker {
 										? "·"
 										: "";
 
-								// Use alternative git icon and place it at the beginning of the label
-								const gitIndicator = isGitRepo ? "$(source-control) " : "";
+								// Choose appropriate icon - workspace files get repo icon, git repos get branch icon
+								let typeIndicator = "";
+								if (isWorkspaceFile) {
+									typeIndicator = "$(repo) ";
+								} else if (isGitRepo) {
+									typeIndicator = "$(git-branch) ";
+								}
 
-								// Combine git indicator with the original label
-								const enhancedLabel = `${gitIndicator}${dir.label}`;
+								// Combine type indicator with the original label
+								const enhancedLabel = `${typeIndicator}${dir.label}`;
 
 								// Keep quality indicator in description
 								const originalDescription = dir.description || dir.fullPath;

@@ -29,6 +29,8 @@ export class ConfigurationManager {
 			additionalRipgrepArgs:
 				config.get<string[]>("additionalRipgrepArgs") || [],
 			boostGitDirectories: config.get<boolean>("boostGitDirectories") ?? true,
+			includeWorkspaceFiles:
+				config.get<boolean>("includeWorkspaceFiles") ?? true,
 		};
 	}
 

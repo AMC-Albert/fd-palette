@@ -1,7 +1,13 @@
 import * as vscode from "vscode";
 
+export enum ItemType {
+	Directory = "directory",
+	WorkspaceFile = "workspaceFile",
+}
+
 export interface DirectoryItem extends vscode.QuickPickItem {
 	fullPath: string;
+	itemType?: ItemType;
 }
 
 export interface CacheEntry {
@@ -23,6 +29,7 @@ export interface SearchParams {
 	respectGitignore: boolean;
 	additionalRipgrepArgs: string[];
 	boostGitDirectories: boolean;
+	includeWorkspaceFiles: boolean;
 }
 
 export enum DirectoryAction {

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { DirectoryItem, DirectoryAction } from "./types";
+import { DirectoryItem, DirectoryAction, ItemType } from "./types";
 import { ConfigurationManager } from "./configuration";
 
 export class WorkspaceManager {
@@ -28,10 +28,25 @@ export class WorkspaceManager {
 			}
 		);
 	}
-
 	static async addDirectoriesToWorkspace(
-		directories: DirectoryItem[]
+		items: DirectoryItem[]
 	): Promise<void> {
+		// Separate workspace files from directories
+		const workspaceFiles = items.filter(item => item.itemType === ItemType.WorkspaceFile);
+		const directories = items.filter(item => item.itemType !== ItemType.WorkspaceFile);
+
+		// Handle workspace files - open them directly
+		if (workspaceFiles.length > 0) {
+			for (const workspaceFile of workspaceFiles) {
+				await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(workspaceFile.fullPath));
+			}
+			// If we only had workspace files, return early
+			if (directories.length === 0) {
+				return;
+			}
+		}
+
+		// Handle directories normally
 		const workspaceFolders = vscode.workspace.workspaceFolders || [];
 		const existingPaths = new Set(
 			workspaceFolders.map((folder) => folder.uri.fsPath.toLowerCase())
@@ -68,11 +83,28 @@ export class WorkspaceManager {
 		} else {
 			vscode.window.showErrorMessage("Failed to add directories to workspace.");
 		}
-	}
-	static async openDirectoriesInNewWindow(
-		directories: DirectoryItem[],
+	}	static async openDirectoriesInNewWindow(
+		items: DirectoryItem[],
 		forceNewWindow: boolean = false
 	): Promise<void> {
+		// Separate workspace files from directories
+		const workspaceFiles = items.filter(item => item.itemType === ItemType.WorkspaceFile);
+		const directories = items.filter(item => item.itemType !== ItemType.WorkspaceFile);
+
+		// Handle workspace files - open them directly
+		for (const workspaceFile of workspaceFiles) {
+			await vscode.commands.executeCommand(
+				"vscode.openFolder",
+				vscode.Uri.file(workspaceFile.fullPath),
+				forceNewWindow
+			);
+		}
+
+		// If we only had workspace files, return early
+		if (directories.length === 0) {
+			return;
+		}
+
 		// Use the forceNewWindow parameter directly instead of config
 		const openInWindow = forceNewWindow;
 

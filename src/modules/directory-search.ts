@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 import * as path from "path";
 import * as os from "os";
 import * as fs from "fs";
-import { DirectoryItem, SearchParams } from "./types";
+import { DirectoryItem, SearchParams, ItemType } from "./types";
 import { ConfigurationManager } from "./configuration";
 
 export class DirectorySearcher {
@@ -490,43 +490,50 @@ export class DirectorySearcher {
 				baseArgs,
 				searchPaths,
 				token
+			); // Parse ripgrep output to extract directories and workspace files
+			const results = this._parseRipgrepOutput(
+				stdout,
+				searchParams.includeWorkspaceFiles
 			);
-
-			// Parse ripgrep output to extract directories
-			const directories = this._parseRipgrepOutput(stdout);
 			console.log(
-				`rip-open: Found ${
-					directories.length
-				} directories using ripgrep across ${
+				`rip-open: Found ${results.length} directories using ripgrep across ${
 					searchPaths.length || "root"
 				} search paths`
 			);
 
-			return directories;
+			return results;
 		} catch (error) {
 			throw error;
 		}
 	}
-
 	/**
-	 * Parse ripgrep output to extract unique directories
+	 * Parse ripgrep output to extract unique directories and workspace files
 	 */
-	private static _parseRipgrepOutput(output: string): DirectoryItem[] {
+	private static _parseRipgrepOutput(
+		output: string,
+		includeWorkspaceFiles: boolean = false
+	): DirectoryItem[] {
 		if (!output.trim()) {
 			console.log("rip-open: No ripgrep output to parse");
 			return [];
 		}
-
 		const directories = new Set<string>();
+		const workspaceFiles = new Set<string>();
 		const lines = output.split("\0").filter((line) => line.trim()); // Split by null separator
 
 		console.log(
 			`rip-open: Parsing ${lines.length} file paths from ripgrep output`
 		);
 
-		// Extract directory paths from file paths
+		// Extract directory paths from file paths and find workspace files
 		for (const filePath of lines) {
 			if (filePath.trim()) {
+				// Check if this is a workspace file
+				if (includeWorkspaceFiles && filePath.endsWith(".code-workspace")) {
+					workspaceFiles.add(filePath);
+				}
+
+				// Always add the directory path
 				const dirPath = path.dirname(filePath);
 				directories.add(dirPath);
 			}
@@ -546,8 +553,7 @@ export class DirectorySearcher {
 		// 		.slice(0, 5)
 		// 		.join(", ")}`
 		// );
-
-		// Convert to DirectoryItem array and sort
+		// Convert directories to DirectoryItem array
 		const directoryItems: DirectoryItem[] = Array.from(directories)
 			.filter((dir) => {
 				// Filter out common undesirable directories
@@ -566,11 +572,27 @@ export class DirectorySearcher {
 				label: path.basename(fullPath),
 				description: fullPath,
 				fullPath: fullPath,
-			}))
-			.sort((a, b) => a.label.localeCompare(b.label));
-		// Final directory count after filtering (reduced verbosity)
+				itemType: ItemType.Directory,
+			}));
 
-		return directoryItems;
+		// Convert workspace files to DirectoryItem array
+		const workspaceItems: DirectoryItem[] = Array.from(workspaceFiles).map(
+			(fullPath) => ({
+				label: path.basename(fullPath, ".code-workspace"),
+				description: fullPath,
+				fullPath: fullPath,
+				itemType: ItemType.WorkspaceFile,
+			})
+		);
+
+		// Combine and sort all items
+		const allItems = [...directoryItems, ...workspaceItems].sort((a, b) =>
+			a.label.localeCompare(b.label)
+		);
+
+		// Final count after filtering (reduced verbosity)
+
+		return allItems;
 	}
 
 	/**
@@ -625,21 +647,28 @@ export class DirectorySearcher {
 					baseArgs,
 					searchPaths,
 					token
-				);
-				// Extract unique directories from ripgrep output
+				); // Extract unique directories and workspace files from ripgrep output
 				const directories = new Set<string>();
+				const workspaceFiles = new Set<string>();
 				const lines = rgOutput
 					.split("\0")
 					.filter((line: string) => line.trim());
 
 				for (const filePath of lines) {
 					if (filePath.trim()) {
+						// Check if this is a workspace file
+						if (
+							searchParams.includeWorkspaceFiles &&
+							filePath.endsWith(".code-workspace")
+						) {
+							workspaceFiles.add(filePath);
+						}
+
+						// Always add the directory path
 						const dirPath = path.dirname(filePath);
 						directories.add(dirPath);
 					}
-				}
-
-				// Convert to array and prepare for fzf sorting
+				} // Convert directories to array and prepare for fzf sorting
 				const dirArray = Array.from(directories)
 					.filter((dir) => {
 						const dirName = path.basename(dir);
@@ -649,32 +678,52 @@ export class DirectorySearcher {
 						);
 					})
 					.sort();
-				if (dirArray.length === 0) {
+
+				// Convert workspace files to array
+				const workspaceArray = Array.from(workspaceFiles);
+
+				// Combine all items for fzf processing
+				const allItems = [...dirArray, ...workspaceArray];
+
+				if (allItems.length === 0) {
 					resolve([]);
 					return;
 				}
 
 				// Check if dataset is too large for fzf to handle efficiently
-				const dirInput = dirArray.join("\0") + "\0";
+				const allItemsInput = allItems.join("\0") + "\0";
 				const MAX_FZF_INPUT_SIZE = 500000; // 500KB limit
 				const MAX_FZF_ITEMS = 5000; // 5000 items limit
 
 				if (
-					dirInput.length > MAX_FZF_INPUT_SIZE ||
-					dirArray.length > MAX_FZF_ITEMS
+					allItemsInput.length > MAX_FZF_INPUT_SIZE ||
+					allItems.length > MAX_FZF_ITEMS
 				) {
 					console.log(
-						`rip-open: Dataset too large for fzf (${dirInput.length} chars, ${dirArray.length} items), using basic sorting`
+						`rip-open: Dataset too large for fzf (${allItemsInput.length} chars, ${allItems.length} items), using basic sorting`
 					);
 					// Fall back to basic sorting for large datasets
-					const directoryItems: DirectoryItem[] = dirArray
-						.map((fullPath) => ({
-							label: path.basename(fullPath),
+					const directoryItems: DirectoryItem[] = dirArray.map((fullPath) => ({
+						label: path.basename(fullPath),
+						description: fullPath,
+						fullPath: fullPath,
+						itemType: ItemType.Directory,
+					}));
+
+					const workspaceItems: DirectoryItem[] = workspaceArray.map(
+						(fullPath) => ({
+							label: path.basename(fullPath, ".code-workspace"),
 							description: fullPath,
 							fullPath: fullPath,
-						}))
-						.sort((a, b) => a.label.localeCompare(b.label));
-					resolve(directoryItems);
+							itemType: ItemType.WorkspaceFile,
+						})
+					);
+
+					const combinedItems = [...directoryItems, ...workspaceItems].sort(
+						(a, b) => a.label.localeCompare(b.label)
+					);
+
+					resolve(combinedItems);
 					return;
 				}
 
@@ -694,7 +743,7 @@ export class DirectorySearcher {
 					} ${fzfArgs.join(" ")}`
 				);
 				console.log(
-					`rip-open: Sending ${dirArray.length} directories (${dirInput.length} chars) to fzf for ranking`
+					`rip-open: Sending ${allItems.length} items (${allItemsInput.length} chars) to fzf for ranking`
 				);
 				console.log(
 					`rip-open: Sample directories being sent to fzf: ${dirArray
@@ -707,13 +756,11 @@ export class DirectorySearcher {
 				});
 
 				let fzfOutput = "";
-				let fzfError = "";
-
-				// Send directory list to fzf stdin
+				let fzfError = ""; // Send combined list to fzf stdin
 				console.log(
-					`rip-open: Sending ${dirInput.length} characters to fzf stdin`
+					`rip-open: Sending ${allItemsInput.length} characters to fzf stdin`
 				);
-				fzfChild.stdin?.write(dirInput);
+				fzfChild.stdin?.write(allItemsInput);
 				fzfChild.stdin?.end();
 
 				fzfChild.stdout?.on("data", (data) => {
@@ -740,31 +787,44 @@ export class DirectorySearcher {
 						if (fzfCode !== 0) {
 							console.warn(
 								`rip-open: fzf ranking failed with code ${fzfCode}: ${fzfError}, falling back to basic sorting`
-							);
-							// Fall back to basic alphabetical sorting
+							); // Fall back to basic alphabetical sorting
 							const directories = dirArray.map((fullPath) => ({
 								label: path.basename(fullPath),
 								description: fullPath,
 								fullPath: fullPath,
+								itemType: ItemType.Directory,
 							}));
-							resolve(directories);
-							return;
-						}
 
-						// Parse fzf output (should be all directories with fzf's ranking)
-						const rankedDirs = fzfOutput
-							.split("\0")
-							.filter((line) => line.trim())
-							.map((fullPath) => ({
-								label: path.basename(fullPath),
+							const workspaceItems = workspaceArray.map((fullPath) => ({
+								label: path.basename(fullPath, ".code-workspace"),
 								description: fullPath,
 								fullPath: fullPath,
+								itemType: ItemType.WorkspaceFile,
 							}));
 
-						console.log(
-							`rip-open: fzf ranked ${rankedDirs.length} directories`
-						);
-						resolve(rankedDirs);
+							const combinedItems = [...directories, ...workspaceItems];
+							resolve(combinedItems);
+							return;
+						} // Parse fzf output (all items with fzf's ranking)
+						const rankedItems = fzfOutput
+							.split("\0")
+							.filter((line) => line.trim())
+							.map((fullPath) => {
+								const isWorkspaceFile = fullPath.endsWith(".code-workspace");
+								return {
+									label: isWorkspaceFile
+										? path.basename(fullPath, ".code-workspace")
+										: path.basename(fullPath),
+									description: fullPath,
+									fullPath: fullPath,
+									itemType: isWorkspaceFile
+										? ItemType.WorkspaceFile
+										: ItemType.Directory,
+								};
+							});
+
+						console.log(`rip-open: fzf ranked ${rankedItems.length} items`);
+						resolve(rankedItems);
 					} catch (error) {
 						console.warn(
 							`rip-open: Error processing fzf output: ${error}, falling back to basic sorting`
@@ -774,8 +834,18 @@ export class DirectorySearcher {
 							label: path.basename(fullPath),
 							description: fullPath,
 							fullPath: fullPath,
+							itemType: ItemType.Directory,
 						}));
-						resolve(directories);
+
+						const workspaceItems = workspaceArray.map((fullPath) => ({
+							label: path.basename(fullPath, ".code-workspace"),
+							description: fullPath,
+							fullPath: fullPath,
+							itemType: ItemType.WorkspaceFile,
+						}));
+
+						const combinedItems = [...directories, ...workspaceItems];
+						resolve(combinedItems);
 					}
 				});
 				fzfChild.on("error", (error) => {
@@ -783,16 +853,25 @@ export class DirectorySearcher {
 						`rip-open: Failed to run fzf: ${error.message}, falling back to basic search`
 					);
 					// Invalidate cache since fzf execution failed
-					this.invalidateFzfCache(searchParams.fzfPath);
-					// Fall back to basic sorting
+					this.invalidateFzfCache(searchParams.fzfPath); // Fall back to basic sorting
 					const directories = dirArray.map((fullPath) => ({
 						label: path.basename(fullPath),
 						description: fullPath,
 						fullPath: fullPath,
+						itemType: ItemType.Directory,
 					}));
-					resolve(directories);
-				}); // Send directory list to fzf
-				fzfChild.stdin?.write(dirInput);
+
+					const workspaceItems = workspaceArray.map((fullPath) => ({
+						label: path.basename(fullPath, ".code-workspace"),
+						description: fullPath,
+						fullPath: fullPath,
+						itemType: ItemType.WorkspaceFile,
+					}));
+
+					const combinedItems = [...directories, ...workspaceItems];
+					resolve(combinedItems);
+				}); // Send combined list to fzf
+				fzfChild.stdin?.write(allItemsInput);
 				fzfChild.stdin?.end();
 			} catch (error) {
 				reject(error);

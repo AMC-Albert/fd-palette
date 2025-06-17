@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
 import { spawn } from "child_process";
-import { DirectoryItem } from "./types";
+import { DirectoryItem, ItemType } from "./types";
 import { ConfigurationManager } from "./configuration";
 import { CacheManager } from "./cache";
 
@@ -372,6 +372,11 @@ export class DirectoryFilter {
 				} catch (error) {
 					// Ignore filesystem errors - just skip the boost
 				}
+			}
+
+			// Boost workspace files (high priority like git repos)
+			if (dir.itemType === ItemType.WorkspaceFile) {
+				score += 55; // Slightly higher than git repos for workspace files
 			}
 
 			// Boost shorter paths (more specific)
