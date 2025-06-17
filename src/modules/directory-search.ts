@@ -518,15 +518,15 @@ export class DirectorySearcher {
 		const directories = new Set<string>();
 		const workspaceFiles = new Set<string>();
 		const lines = output.split("\0").filter((line) => line.trim());
-
 		// Extract directory paths and workspace files
 		for (const filePath of lines) {
 			if (filePath.trim()) {
 				if (includeWorkspaceFiles && filePath.endsWith(".code-workspace")) {
 					workspaceFiles.add(filePath);
 				}
-				const dirPath = path.dirname(filePath);
-				directories.add(dirPath);
+
+				// Extract all directory path segments from the file path
+				this._extractAllDirectoryPaths(filePath, directories, searchPaths);
 			}
 		}
 
@@ -644,11 +644,8 @@ export class DirectorySearcher {
 							filePath.endsWith(".code-workspace")
 						) {
 							workspaceFiles.add(filePath);
-						}
-
-						// Always add the directory path
-						const dirPath = path.dirname(filePath);
-						directories.add(dirPath);
+						} // Always add the directory path and all intermediate paths
+						this._extractAllDirectoryPaths(filePath, directories, searchPaths);
 					}
 				} // Add root-level subdirectories to capture folders without files
 				for (const root of searchPaths) {
@@ -872,5 +869,39 @@ export class DirectorySearcher {
 				reject(error);
 			}
 		});
+	}
+
+	/**
+	 * Extract all directory paths from a file path and add them to the directories set.
+	 * This captures intermediate directories that might only contain subdirectories.
+	 */
+	private static _extractAllDirectoryPaths(
+		filePath: string,
+		directories: Set<string>,
+		searchPaths: string[]
+	): void {
+		let currentPath = path.dirname(filePath);
+
+		// Keep going up the directory tree until we reach a search path root or can't go further
+		while (
+			currentPath &&
+			currentPath !== "." &&
+			currentPath !== path.dirname(currentPath)
+		) {
+			directories.add(currentPath);
+
+			// Check if we've reached one of the search path roots
+			const isSearchRoot = searchPaths.some((searchPath) => {
+				const normalizedSearchPath = path.resolve(searchPath);
+				const normalizedCurrentPath = path.resolve(currentPath);
+				return normalizedCurrentPath === normalizedSearchPath;
+			});
+
+			if (isSearchRoot) {
+				break;
+			}
+
+			currentPath = path.dirname(currentPath);
+		}
 	}
 }
