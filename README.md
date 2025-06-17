@@ -13,7 +13,7 @@ System-wide directory search and workspace management using [ripgrep](https://gi
 - **Intelligent caching**: Results cached for 2 minutes with automatic background refresh.
 - **Enhanced fuzzy matching**: Optional fzf integration for superior search quality.
 - **Multi-path search**: Search across multiple root directories simultaneously.
-- **Workspace integration**: Add directories to workspace or open in new window.
+- **Workspace support**: Open .code-workspace files directly, or extract and add their folder paths to the current workspace.
 
 ## Search Interface
 
@@ -23,6 +23,7 @@ When fzf is available and actively filtering, visual indicators show match quali
 - `•` - Good matches (top 30% of results).
 - `·` - Fair matches (top 70% of results).
 - `$(git-branch)` - Git repositories (when git repo boost enabled).
+- `$(repo)` - .code-workspace files.
 - Standard VS Code letter highlighting for basic matches.
 
 Large datasets automatically use VS Code's built-in fuzzy matching without quality indicators.
@@ -39,9 +40,9 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 ### Performance Tuning
 ```json
 {
-    "ripOpen.maxDepth": 10,
-    "ripOpen.cacheDurationMinutes": 2,
-    "ripOpen.enableBackgroundRefresh": true
+    "ripOpen.enableCache": true,
+    "ripOpen.enableBackgroundRefresh": true,
+    "ripOpen.uiDisplayLimit": 100
 }
 ```
 
@@ -49,17 +50,17 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 ```json
 {
     "ripOpen.ripgrepPath": "auto",  // auto-detect or specify path
-    "ripOpen.fzfPath": "fzf",       // assumes fzf in PATH
-    "ripOpen.enableFzf": true
+    "ripOpen.fzfPath": "fzf"        // assumes fzf in PATH
 }
 ```
 
 ### Advanced Ripgrep Configuration
 ```json
 {
-    "ripOpen.includeHidden": true,      // Include hidden files/directories
-    "ripOpen.respectGitignore": false,  // Respect .gitignore and ignore files
-    "ripOpen.additionalRipgrepArgs": ["--follow", "--case-sensitive"]
+    "ripOpen.additionalRipgrepArgs": ["--max-depth=10", "--hidden", "--no-ignore"],
+    "ripOpen.boostGitDirectories": true,
+    "ripOpen.includeWorkspaceFiles": true,
+    "ripOpen.excludeHomeDotFolders": true
 }
 ```
 
@@ -72,10 +73,12 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 | `Rip Open: Open Directory in New Window`          | `Ctrl+Alt+Shift+O` | Search and open in new window         |
 | `Rip Open: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace |
 | `Rip Open: Clear Search Cache`                    | -                  | Force cache refresh                   |
+| `Rip Open: Reset Settings to Default`             | -                  | Reset all settings to default values  |
 
 ## Performance Notes
 
 - Large datasets (>5000 directories) automatically fallback to basic sorting.
-- fzf is called in automatically when the amount of results shrink.
+- fzf filtering is triggered automatically when search results narrow down.
 - Background cache refresh maintains responsiveness for subsequent searches.
+- 10-second buffer prevents excessive cache refreshing during rapid searches.
 - Memory and file-based caching optimize repeated searches.
