@@ -4,7 +4,7 @@
 	"publisher": "rip-open-dev",
 	"displayName": "Rip Open",
 	"description": "System-wide directory search and workspace management using ripgrep and fzf.",
-	"version": "0.9.0",
+	"version": "0.9.1",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/AMC-Albert/rip-open"
@@ -90,7 +90,8 @@
 					},
 					"default": [],
 					"description": "List of search paths for directory search - first valid directory wins (leave empty to search from root)"
-				},				"ripOpen.excludePatterns": {
+				},
+				"ripOpen.excludePatterns": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -180,7 +181,8 @@
 					"type": "string",
 					"default": "auto",
 					"description": "Path to ripgrep executable (use 'auto' for automatic detection, 'rg' if in PATH, or specify full path)"
-				},				"ripOpen.fzfPath": {
+				},
+				"ripOpen.fzfPath": {
 					"type": "string",
 					"default": "fzf",
 					"description": "Path to fzf executable (use 'fzf' if in PATH)"
@@ -209,11 +211,13 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Whether to open directories in a new window by default"
-				},				"ripOpen.uiDisplayLimit": {
+				},
+				"ripOpen.uiDisplayLimit": {
 					"type": "number",
 					"default": 100,
 					"description": "Maximum number of items to display in the UI before requiring filtering"
-				},"ripOpen.boostGitDirectories": {
+				},
+				"ripOpen.boostGitDirectories": {
 					"type": "boolean",
 					"default": true,
 					"description": "Give higher priority to directories that contain a .git folder (git repositories)"
@@ -222,12 +226,17 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Include .code-workspace files in search results with high priority"
-				},				"ripOpen.additionalRipgrepArgs": {
+				},
+				"ripOpen.additionalRipgrepArgs": {
 					"type": "array",
 					"items": {
 						"type": "string"
 					},
-					"default": ["--max-depth=10", "--hidden", "--no-ignore"],
+					"default": [
+						"--max-depth=10",
+						"--hidden",
+						"--no-ignore"
+					],
 					"description": "Additional command-line arguments to pass to ripgrep (e.g., ['--follow', '--case-sensitive', '--max-depth=5']). Default includes common useful options."
 				},
 				"ripOpen.fzfFilterArgs": {
