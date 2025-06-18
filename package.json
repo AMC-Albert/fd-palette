@@ -4,7 +4,7 @@
 	"publisher": "rip-scope-dev",
 	"displayName": "RipScope",
 	"description": "System-wide directory search and workspace management using ripgrep and fzf.",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/AMC-Albert/rip-scope"
