@@ -359,6 +359,13 @@ export class FileUtils {
 			[]
 		);
 	}
+
+	static async createDirectory(dirPath: string): Promise<void> {
+		const success = await this.mkdir(dirPath, true);
+		if (!success) {
+			throw new Error(`Failed to create directory: ${dirPath}`);
+		}
+	}
 }
 
 export class MessageUtils {

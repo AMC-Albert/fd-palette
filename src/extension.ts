@@ -32,11 +32,17 @@ export function activate(context: vscode.ExtensionContext) {
 			await searchOrchestrator.searchAndAddDirectories();
 		}
 	);
-
 	const replaceWorkspaceCommand = vscode.commands.registerCommand(
 		"rip-open.replaceWorkspace",
 		async () => {
 			await searchOrchestrator.searchAndReplaceWorkspace();
+		}
+	);
+
+	const createFolderCommand = vscode.commands.registerCommand(
+		"rip-open.createFolder",
+		async () => {
+			await searchOrchestrator.searchAndCreateFolder();
 		}
 	);
 
@@ -75,6 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		addToWorkspaceCommand,
 		replaceWorkspaceCommand,
+		createFolderCommand,
 		openInCurrentWindowCommand,
 		openInNewWindowCommand,
 		clearCacheCommand,

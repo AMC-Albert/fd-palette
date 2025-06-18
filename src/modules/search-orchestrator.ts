@@ -3,7 +3,7 @@ import { CacheManager } from "./cache";
 import { DirectorySearcher } from "./directory-search";
 import { DirectoryPicker } from "./ui";
 import { ConfigurationManager } from "./configuration";
-import { DirectoryAction, DirectoryItem } from "./types";
+import { DirectoryAction, DirectoryItem, ItemType } from "./types";
 import { MessageUtils } from "./utils";
 
 export class SearchOrchestrator {
@@ -24,11 +24,22 @@ export class SearchOrchestrator {
 		await this.performDirectorySearch(DirectoryAction.OpenInWindow, true);
 	}
 
+	async searchAndCreateFolder(): Promise<void> {
+		await this.performDirectorySearch(DirectoryAction.CreateFolder);
+	}
 	private async performDirectorySearch(
 		action: DirectoryAction,
 		forceNewWindow: boolean = false
 	): Promise<void> {
-		const searchParams = ConfigurationManager.getSearchParams();
+		let searchParams = ConfigurationManager.getSearchParams();
+
+		// For CreateFolder action, exclude workspace files
+		if (action === DirectoryAction.CreateFolder) {
+			searchParams = {
+				...searchParams,
+				includeWorkspaceFiles: false,
+			};
+		}
 
 		// Check cache first with background refresh capability
 		const cachedDirectories = this.cacheManager.getCachedDirectoriesWithRefresh(
@@ -36,9 +47,16 @@ export class SearchOrchestrator {
 			true
 		);
 		if (cachedDirectories) {
-			// Using cached results - reduced logging verbosity
+			// Filter out workspace files for CreateFolder action if they exist in cache
+			let directoriesToShow = cachedDirectories;
+			if (action === DirectoryAction.CreateFolder) {
+				directoriesToShow = cachedDirectories.filter(
+					(dir) => dir.itemType !== ItemType.WorkspaceFile
+				);
+			}
+
 			await DirectoryPicker.showDirectoryPicker(
-				cachedDirectories,
+				directoriesToShow,
 				action,
 				forceNewWindow,
 				this.cacheManager
@@ -55,13 +73,14 @@ export class SearchOrchestrator {
 			await MessageUtils.showError(`ripgrep is not available: ${error}`);
 			return;
 		}
-
 		// Show a progress indicator while searching
 		const actionText =
 			action === DirectoryAction.AddToWorkspace
 				? "adding to workspace"
 				: action === DirectoryAction.ReplaceWorkspace
 				? "replacing workspace"
+				: action === DirectoryAction.CreateFolder
+				? "creating folder"
 				: "opening";
 
 		await vscode.window.withProgress(

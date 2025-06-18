@@ -38,6 +38,11 @@
 				"category": "RipOpen"
 			},
 			{
+				"command": "rip-open.createFolder",
+				"title": "Create Folder",
+				"category": "RipOpen"
+			},
+			{
 				"command": "rip-open.openInCurrentWindow",
 				"title": "Open Directory in Current Window",
 				"category": "RipOpen"
@@ -73,6 +78,11 @@
 				"command": "rip-open.replaceWorkspace",
 				"key": "ctrl+alt+r",
 				"mac": "cmd+alt+r"
+			},
+			{
+				"command": "rip-open.createFolder",
+				"key": "ctrl+alt+shift+n",
+				"mac": "cmd+alt+shift+n"
 			},
 			{
 				"command": "rip-open.openInCurrentWindow",

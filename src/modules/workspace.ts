@@ -582,4 +582,80 @@ export class WorkspaceManager {
 			throw new Error(`Failed to parse workspace file: ${error}`);
 		}
 	}
+
+	/**
+	 * Create a new folder in the selected directory
+	 */
+	static async createFolderInDirectory(
+		directoryItem: DirectoryItem
+	): Promise<void> {
+		try {
+			// Prompt for folder name
+			const folderName = await vscode.window.showInputBox({
+				prompt: `Enter name for new folder in ${path.basename(
+					directoryItem.fullPath
+				)}`,
+				placeHolder: "New folder name",
+				validateInput: (value: string) => {
+					if (!value || value.trim().length === 0) {
+						return "Folder name cannot be empty";
+					}
+					// Check for invalid characters in folder names
+					const invalidChars = /[<>:"/\\|?*]/;
+					if (invalidChars.test(value)) {
+						return "Folder name contains invalid characters";
+					}
+					return null;
+				},
+			});
+
+			if (!folderName) {
+				return; // User cancelled
+			}
+
+			const newFolderPath = path.join(
+				directoryItem.fullPath,
+				folderName.trim()
+			);
+
+			// Check if folder already exists
+			if (FileUtils.existsSync(newFolderPath)) {
+				await MessageUtils.showError(
+					`Folder "${folderName}" already exists in ${path.basename(
+						directoryItem.fullPath
+					)}`
+				);
+				return;
+			}
+
+			// Create the folder
+			await FileUtils.createDirectory(newFolderPath); // Show success message and offer to open
+			const openChoice = await vscode.window.showInformationMessage(
+				`Created folder "${folderName}" in ${path.basename(
+					directoryItem.fullPath
+				)}`,
+				"Open with Code",
+				"Add to Workspace"
+			);
+
+			if (openChoice === "Open with Code") {
+				await vscode.commands.executeCommand(
+					"vscode.openFolder",
+					vscode.Uri.file(newFolderPath),
+					false // Open in current window
+				);
+			} else if (openChoice === "Add to Workspace") {
+				const newDirectoryItem: DirectoryItem = {
+					label: folderName,
+					description: newFolderPath,
+					fullPath: newFolderPath,
+					itemType: ItemType.Directory,
+				};
+				await this.addDirectoriesToWorkspace([newDirectoryItem]);
+			}
+		} catch (error) {
+			await MessageUtils.showError(`Failed to create folder: ${error}`);
+			throw error;
+		}
+	}
 }

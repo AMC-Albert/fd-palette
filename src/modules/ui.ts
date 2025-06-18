@@ -203,6 +203,9 @@ export class DirectoryPicker {
 						await WorkspaceManager.addDirectoriesToWorkspace(itemsToProcess);
 					} else if (action === DirectoryAction.ReplaceWorkspace) {
 						await WorkspaceManager.replaceWorkspaceFolders(itemsToProcess);
+					} else if (action === DirectoryAction.CreateFolder) {
+						// For CreateFolder, only use the first selected directory
+						await WorkspaceManager.createFolderInDirectory(itemsToProcess[0]);
 					} else {
 						// For OpenInWindow action, use the forceNewWindow parameter
 						await WorkspaceManager.openDirectoriesInNewWindow(
@@ -216,6 +219,8 @@ export class DirectoryPicker {
 							? "adding"
 							: action === DirectoryAction.ReplaceWorkspace
 							? "replacing"
+							: action === DirectoryAction.CreateFolder
+							? "creating folder in"
 							: "opening";
 					vscode.window.showErrorMessage(
 						`Error ${actionText} directories: ${error}`

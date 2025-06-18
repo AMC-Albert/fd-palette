@@ -34,4 +34,5 @@ export enum DirectoryAction {
 	AddToWorkspace = "addToWorkspace",
 	ReplaceWorkspace = "replaceWorkspace",
 	OpenInWindow = "openInWindow",
+	CreateFolder = "createFolder",
 }
