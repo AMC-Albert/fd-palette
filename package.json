@@ -4,7 +4,7 @@
 	"publisher": "rip-open-dev",
 	"displayName": "RipOpen",
 	"description": "System-wide directory search and workspace management using ripgrep and fzf.",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/AMC-Albert/rip-open"
