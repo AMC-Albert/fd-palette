@@ -415,29 +415,17 @@ export class DirectoryPicker {
 	static async handleMoveAction(
 		sourceDirectories: DirectoryItem[]
 	): Promise<void> {
-		console.log(
-			"rip-open: Starting move action for",
-			sourceDirectories.length,
-			"items"
-		);
-
 		await vscode.window.showInformationMessage(
-			`Move operation: Select destination for ${sourceDirectories.length} item(s). A new search will open.`,
+			`Move operation: Select destination for ${sourceDirectories.length} item(s).`,
 			{ modal: false }
 		);
 
 		// Store the source directories globally for the destination selection
 		(global as any).ripOpenMoveSource = sourceDirectories;
-		console.log(
-			"rip-open: Stored source directories, executing selectMoveDestination command"
-		);
 
 		// Trigger a new unified search for destination selection
 		try {
 			await vscode.commands.executeCommand("rip-open.selectMoveDestination");
-			console.log(
-				"rip-open: selectMoveDestination command executed successfully"
-			);
 		} catch (error) {
 			console.error(
 				"rip-open: Error executing selectMoveDestination command:",
@@ -452,13 +440,16 @@ export class DirectoryPicker {
 	static async handleCopyAction(
 		sourceDirectories: DirectoryItem[]
 	): Promise<void> {
-		await vscode.window.showInformationMessage(
-			`Copy operation: Select destination for ${sourceDirectories.length} item(s). A new search will open.`,
-			{ modal: false }
+		// Show info message without waiting for it to prevent blocking
+		vscode.window.showInformationMessage(
+			`Copy operation: Select destination for ${sourceDirectories.length} item(s).`
 		);
 
 		// Store the source directories globally for the destination selection
 		(global as any).ripOpenCopySource = sourceDirectories;
+
+		// Add a small delay to potentially help with focus issues
+		await new Promise((resolve) => setTimeout(resolve, 100));
 
 		// Trigger a new unified search for destination selection
 		await vscode.commands.executeCommand("rip-open.selectCopyDestination");

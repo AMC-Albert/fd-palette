@@ -202,9 +202,6 @@ export class CacheManager {
 						// Load into memory cache for next time
 						this.memoryCache.set(cacheKey, diskEntry);
 						entry = diskEntry;
-						console.log(
-							`rip-open: Loaded cache from disk on-demand (${diskEntry.directories.length} entries)`
-						);
 					}
 				}
 			} catch (error) {
@@ -242,9 +239,6 @@ export class CacheManager {
 		) {
 			// Automatically refresh if cache is expired
 			if (this.shouldRefreshInBackground(searchParams)) {
-				console.log(
-					"rip-open: Triggering background refresh (10s buffer passed)"
-				);
 				this.triggerBackgroundRefresh(searchParams);
 			}
 		}
@@ -322,9 +316,8 @@ export class CacheManager {
 
 		const refreshPromise = this.doBackgroundRefresh(searchParams);
 		this.backgroundRefreshes.set(cacheKey, refreshPromise);
-
 		try {
-			await refreshPromise; // Background cache refresh completed successfully
+			await refreshPromise;
 		} catch (error) {
 			console.error("rip-open: Background cache refresh failed:", error);
 		} finally {
@@ -340,25 +333,13 @@ export class CacheManager {
 			const { DirectorySearcher } = await import("./directory-search.js");
 			const { ConfigurationManager } = await import("./configuration.js");
 
-			// IMPORTANT: Resolve the actual search paths that will be used
-			// This ensures consistency between cache key and actual search
+			// IMPORTANT: Resolve the actual search paths that will be used			// This ensures consistency between cache key and actual search
 			const actualSearchPaths =
 				await ConfigurationManager.getValidSearchPaths();
 			const correctedSearchParams = {
 				...searchParams,
 				searchPath: actualSearchPaths,
 			};
-
-			console.log(
-				`rip-open: Background refresh - original paths: ${searchParams.searchPath.join(
-					", "
-				)}`
-			);
-			console.log(
-				`rip-open: Background refresh - corrected paths: ${
-					correctedSearchParams.searchPath.join(", ") || "home directory"
-				}`
-			);
 
 			// Check if ripgrep is available
 			const rgPath = await DirectorySearcher.checkRipgrepAvailability(); // Check if fzf is available
@@ -455,12 +436,7 @@ export class CacheManager {
 			try {
 				// Triple-check that the directory exists before getting the file path
 				if (!FileUtils.existsSync(cacheDir)) {
-					console.log(
-						"rip-open: Cache directory missing, recreating:",
-						cacheDir
-					);
 					fs.mkdirSync(cacheDir, { recursive: true });
-					console.log("rip-open: Directory created successfully");
 				}
 
 				// Verify directory exists after creation attempt
@@ -469,19 +445,10 @@ export class CacheManager {
 				}
 
 				const cacheFilePath = this.getCacheFilePath(cacheKey, cacheDir);
-				console.log(
-					"rip-open: Writing cache file (cache skip optimization removed):",
-					cacheFilePath
-				);
-				console.log("rip-open: Cache file path length:", cacheFilePath.length);
 
 				// Ensure parent directory of cache file exists (should be same as cacheDir)
 				const parentDir = path.dirname(cacheFilePath);
 				if (!FileUtils.existsSync(parentDir)) {
-					console.log(
-						"rip-open: Parent directory missing, creating:",
-						parentDir
-					);
 					fs.mkdirSync(parentDir, { recursive: true });
 				}
 
@@ -493,15 +460,8 @@ export class CacheManager {
 				}
 
 				fs.writeFileSync(cacheFilePath, JSON.stringify(entry), "utf8");
-				console.log("rip-open: Successfully wrote cache file:", cacheFilePath);
 			} catch (error: any) {
 				console.error("Error writing file cache:", error);
-				console.error(
-					"rip-open: Error details - code:",
-					error.code,
-					"message:",
-					error.message
-				);
 				console.error(
 					"rip-open: Cache directory exists:",
 					FileUtils.existsSync(cacheDir)

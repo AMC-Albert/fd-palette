@@ -99,21 +99,9 @@ export function activate(context: vscode.ExtensionContext) {
 	const selectMoveDestinationCommand = vscode.commands.registerCommand(
 		"rip-open.selectMoveDestination",
 		async () => {
-			try {
-				console.log("rip-open: selectMoveDestination command called");
-				await searchOrchestrator.searchForMoveDestination();
-			} catch (error) {
-				console.error(
-					"rip-open: Error in selectMoveDestination command:",
-					error
-				);
-				vscode.window.showErrorMessage(
-					`Move destination selection failed: ${error}`
-				);
-			}
+			await searchOrchestrator.searchForMoveDestination();
 		}
 	);
-
 	const selectCopyDestinationCommand = vscode.commands.registerCommand(
 		"rip-open.selectCopyDestination",
 		async () => {

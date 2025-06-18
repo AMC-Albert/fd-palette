@@ -12,9 +12,11 @@ let pendingCopyItems: DirectoryItem[] = [];
 
 export class SearchOrchestrator {
 	constructor(private cacheManager: CacheManager) {}
+
 	async searchAndAddDirectories(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.AddToWorkspace);
 	}
+
 	async searchAndReplaceWorkspace(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.ReplaceWorkspace);
 	}
@@ -30,6 +32,7 @@ export class SearchOrchestrator {
 	async searchAndPromptForAction(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.PromptForAction);
 	}
+
 	private async performDirectorySearch(
 		action: DirectoryAction,
 		forceNewWindow: boolean = false
@@ -51,17 +54,6 @@ export class SearchOrchestrator {
 			...searchParams,
 			searchPath: actualSearchPaths,
 		};
-
-		console.log(
-			`rip-open: Original search paths: ${ConfigurationManager.getSearchParams().searchPath.join(
-				", "
-			)}`
-		);
-		console.log(
-			`rip-open: Resolved search paths for cache: ${
-				searchParams.searchPath.join(", ") || "home directory"
-			}`
-		);
 
 		// Check cache first with background refresh capability
 		const cachedDirectories = this.cacheManager.getCachedDirectoriesWithRefresh(
@@ -85,16 +77,17 @@ export class SearchOrchestrator {
 			);
 			return;
 		}
+
 		// No cached results found, performing fresh search
 		// Check if ripgrep is available
 		let rgPath: string;
 		try {
 			rgPath = await DirectorySearcher.checkRipgrepAvailability();
-			// Reduced logging verbosity
 		} catch (error) {
 			await MessageUtils.showError(`ripgrep is not available: ${error}`);
 			return;
 		}
+
 		// Show a progress indicator while searching
 		const actionText =
 			action === DirectoryAction.AddToWorkspace
@@ -125,15 +118,13 @@ export class SearchOrchestrator {
 						searchMethod = "ripgrep + fzf";
 					} catch (fzfError) {
 						// fzf search failed, fall back to basic ripgrep
-						console.log(
-							`rip-open: fzf search failed, falling back to basic ripgrep: ${fzfError}`
-						);
 						directories = await DirectorySearcher.findDirectories(
 							searchParams,
 							token
 						);
 						searchMethod = "ripgrep";
 					}
+
 					if (directories.length === 0) {
 						const noResultsMessage = `No directories found using ${searchMethod}.`;
 						await MessageUtils.showInfo(noResultsMessage);
@@ -147,7 +138,9 @@ export class SearchOrchestrator {
 					await this.cacheManager.setCachedDirectories(
 						searchParams,
 						directories
-					); // Show the directory picker
+					);
+
+					// Show the directory picker
 					await DirectoryPicker.showDirectoryPicker(
 						directories,
 						action,
@@ -165,10 +158,9 @@ export class SearchOrchestrator {
 			}
 		);
 	}
+
 	async searchForMoveDestination(): Promise<void> {
-		console.log("rip-open: searchForMoveDestination called");
 		const sourceDirectories = (global as any).ripOpenMoveSource;
-		console.log("rip-open: Retrieved source directories:", sourceDirectories);
 
 		if (!sourceDirectories || sourceDirectories.length === 0) {
 			await MessageUtils.showError(
@@ -177,7 +169,6 @@ export class SearchOrchestrator {
 			return;
 		}
 
-		console.log("rip-open: Calling performDestinationSearch for move");
 		await this.performDestinationSearch(
 			DirectoryAction.Move,
 			sourceDirectories
@@ -198,15 +189,11 @@ export class SearchOrchestrator {
 			sourceDirectories
 		);
 	}
+
 	private async performDestinationSearch(
 		action: DirectoryAction.Move | DirectoryAction.Copy,
 		sourceDirectories: DirectoryItem[]
 	): Promise<void> {
-		console.log(
-			"rip-open: performDestinationSearch called with action:",
-			action
-		);
-
 		let searchParams = ConfigurationManager.getSearchParams();
 
 		// For destination selection, exclude workspace files
@@ -223,14 +210,12 @@ export class SearchOrchestrator {
 			searchPath: actualSearchPaths,
 		};
 
-		console.log("rip-open: Checking cache for destination search");
 		// Check cache first
 		const cachedDirectories = this.cacheManager.getCachedDirectoriesWithRefresh(
 			searchParams,
 			true
 		);
 		if (cachedDirectories) {
-			console.log("rip-open: Using cached directories for destination search");
 			// Filter out workspace files
 			const validDestinations = cachedDirectories.filter(
 				(dir) => dir.itemType !== ItemType.WorkspaceFile
@@ -243,10 +228,6 @@ export class SearchOrchestrator {
 			);
 			return;
 		}
-
-		console.log(
-			"rip-open: No cache found, performing fresh search for destinations"
-		);
 
 		// Perform fresh search for destinations
 		const actionText = action === DirectoryAction.Move ? "move" : "copy";
