@@ -160,7 +160,7 @@ export class SearchOrchestrator {
 	}
 
 	async searchForMoveDestination(): Promise<void> {
-		const sourceDirectories = (global as any).ripOpenMoveSource;
+		const sourceDirectories = (global as any).ripScopeMoveSource;
 
 		if (!sourceDirectories || sourceDirectories.length === 0) {
 			await MessageUtils.showError(
@@ -176,7 +176,7 @@ export class SearchOrchestrator {
 	}
 
 	async searchForCopyDestination(): Promise<void> {
-		const sourceDirectories = (global as any).ripOpenCopySource;
+		const sourceDirectories = (global as any).ripScopeCopySource;
 		if (!sourceDirectories || sourceDirectories.length === 0) {
 			await MessageUtils.showError(
 				"No source directories found for copy operation"

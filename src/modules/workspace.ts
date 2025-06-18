@@ -109,7 +109,7 @@ export class WorkspaceManager {
 			}
 
 			vscode.window.showInformationMessage(message);
-			console.log(`rip-open: ${message}`);
+			console.log(`rip-scope: ${message}`);
 
 			// Show warning about invalid paths if any were found
 			if (allInvalidPaths.length > 0) {
@@ -123,7 +123,7 @@ export class WorkspaceManager {
 				);
 			}
 		} else {
-			console.error(`rip-open: Failed to add directories to workspace`);
+			console.error(`rip-scope: Failed to add directories to workspace`);
 			await MessageUtils.showError("Failed to add directories to workspace.");
 		}
 	}
@@ -291,7 +291,7 @@ export class WorkspaceManager {
 			vscode.window.showErrorMessage("Failed to remove folder from workspace");
 		} else {
 			console.log(
-				`rip-open: Removed folder from workspace: ${folderToRemove.uri.fsPath}`
+				`rip-scope: Removed folder from workspace: ${folderToRemove.uri.fsPath}`
 			);
 			await this.showTimedInfoMessage(
 				`Removed ${path.basename(folderToRemove.uri.fsPath)} from workspace`
@@ -316,7 +316,7 @@ export class WorkspaceManager {
 
 		if (success) {
 			console.log(
-				`rip-open: Removed ${workspaceFolders.length} existing workspace folders`
+				`rip-scope: Removed ${workspaceFolders.length} existing workspace folders`
 			);
 		} else {
 			throw new Error("Failed to remove existing workspace folders");
@@ -329,7 +329,7 @@ export class WorkspaceManager {
 	static async replaceWorkspaceFolders(items: DirectoryItem[]): Promise<void> {
 		try {
 			console.log(
-				`rip-open: Starting replaceWorkspaceFolders with ${items.length} items`
+				`rip-scope: Starting replaceWorkspaceFolders with ${items.length} items`
 			);
 
 			const {
@@ -362,7 +362,7 @@ export class WorkspaceManager {
 			const currentFolderCount = workspaceFolders.length;
 
 			console.log(
-				`rip-open: Current workspace has ${currentFolderCount} folders`
+				`rip-scope: Current workspace has ${currentFolderCount} folders`
 			);
 
 			// Check if we're trying to replace with the exact same folders
@@ -385,7 +385,7 @@ export class WorkspaceManager {
 					message += ` (${extractedPaths.length} extracted from ${workspaceFiles.length} workspace file(s))`;
 				}
 				vscode.window.showInformationMessage(message);
-				console.log(`rip-open: ${message} - no changes needed`);
+				console.log(`rip-scope: ${message} - no changes needed`);
 				return;
 			}
 
@@ -395,7 +395,7 @@ export class WorkspaceManager {
 			}));
 
 			console.log(
-				`rip-open: Will replace with ${
+				`rip-scope: Will replace with ${
 					allDirectories.length
 				} folders: ${allDirectories.map((item) => item.fullPath).join(", ")}`
 			);
@@ -407,7 +407,7 @@ export class WorkspaceManager {
 				...newWorkspaceFolders // add new folders
 			);
 
-			console.log(`rip-open: updateWorkspaceFolders result: ${success}`);
+			console.log(`rip-scope: updateWorkspaceFolders result: ${success}`);
 
 			if (success) {
 				let message = `Replaced workspace with ${allDirectories.length} folder(s)`;
@@ -416,7 +416,9 @@ export class WorkspaceManager {
 				}
 
 				vscode.window.showInformationMessage(message);
-				console.log(`rip-open: Completed replaceWorkspaceFolders - ${message}`);
+				console.log(
+					`rip-scope: Completed replaceWorkspaceFolders - ${message}`
+				);
 
 				// Show warning about invalid paths if any were found
 				if (allInvalidPaths.length > 0) {
@@ -431,11 +433,11 @@ export class WorkspaceManager {
 				}
 			} else {
 				const errorMsg = "Failed to replace workspace folders";
-				console.error(`rip-open: ${errorMsg}`);
+				console.error(`rip-scope: ${errorMsg}`);
 				await MessageUtils.showError(errorMsg);
 			}
 		} catch (error) {
-			console.error(`rip-open: Error in replaceWorkspaceFolders:`, error);
+			console.error(`rip-scope: Error in replaceWorkspaceFolders:`, error);
 			await MessageUtils.showError(
 				`Failed to replace workspace folders: ${error}`
 			);
@@ -467,11 +469,11 @@ export class WorkspaceManager {
 			await this.replaceWorkspaceFolders([parentDirectoryItem]);
 
 			console.log(
-				`rip-open: Replaced workspace with parent folder: ${parentPath}`
+				`rip-scope: Replaced workspace with parent folder: ${parentPath}`
 			);
 		} catch (error) {
 			console.error(
-				`rip-open: Error in replaceWorkspaceWithParentFolder:`,
+				`rip-scope: Error in replaceWorkspaceWithParentFolder:`,
 				error
 			);
 			await MessageUtils.showError(
@@ -521,12 +523,12 @@ export class WorkspaceManager {
 			await this.openSingleDirectory(parentPath, forceNewWindow);
 
 			console.log(
-				`rip-open: Opened parent folder in ${
+				`rip-scope: Opened parent folder in ${
 					forceNewWindow ? "new window" : "current window"
 				}: ${parentPath}`
 			);
 		} catch (error) {
-			console.error(`rip-open: Error in openParentFolder:`, error);
+			console.error(`rip-scope: Error in openParentFolder:`, error);
 			await MessageUtils.showError(`Failed to open parent folder: ${error}`);
 			throw error;
 		}
@@ -603,7 +605,7 @@ export class WorkspaceManager {
 					totalWorkspacePaths += result.totalPaths;
 				} catch (error) {
 					console.warn(
-						`rip-open: Failed to extract paths from ${workspaceFile.fullPath}:`,
+						`rip-scope: Failed to extract paths from ${workspaceFile.fullPath}:`,
 						error
 					);
 					vscode.window.showWarningMessage(
@@ -650,7 +652,7 @@ export class WorkspaceManager {
 				return vscode.Uri.file(clipboardContent);
 			}
 		} catch (error) {
-			console.error("rip-open: Could not determine selected folder:", error);
+			console.error("rip-scope: Could not determine selected folder:", error);
 			vscode.window.showErrorMessage("Could not determine selected folder");
 		}
 
@@ -709,7 +711,7 @@ export class WorkspaceManager {
 			}
 
 			console.log(
-				`rip-open: Extracted ${extractedDirectories.length}/${totalPaths} valid paths from workspace file: ${workspaceFilePath}`
+				`rip-scope: Extracted ${extractedDirectories.length}/${totalPaths} valid paths from workspace file: ${workspaceFilePath}`
 			);
 
 			return {
@@ -719,7 +721,7 @@ export class WorkspaceManager {
 			};
 		} catch (error) {
 			console.error(
-				`rip-open: Error parsing workspace file ${workspaceFilePath}:`,
+				`rip-scope: Error parsing workspace file ${workspaceFilePath}:`,
 				error
 			);
 			throw new Error(`Failed to parse workspace file: ${error}`);

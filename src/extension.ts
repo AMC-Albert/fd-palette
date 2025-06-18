@@ -11,7 +11,7 @@ let searchOrchestrator: SearchOrchestrator;
 let cacheManager: CacheManager;
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log("rip-open extension is now active!");
+	console.log("rip-scope extension is now active!");
 
 	// Set extension context for DirectorySearcher (needed for caching)
 	DirectorySearcher.setExtensionContext(context);
@@ -28,82 +28,82 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register commands
 	const addToWorkspaceCommand = vscode.commands.registerCommand(
-		"rip-open.addToWorkspace",
+		"rip-scope.addToWorkspace",
 		async () => {
 			await searchOrchestrator.searchAndAddDirectories();
 		}
 	);
 	const replaceWorkspaceCommand = vscode.commands.registerCommand(
-		"rip-open.replaceWorkspace",
+		"rip-scope.replaceWorkspace",
 		async () => {
 			await searchOrchestrator.searchAndReplaceWorkspace();
 		}
 	);
 	const createFolderCommand = vscode.commands.registerCommand(
-		"rip-open.createFolder",
+		"rip-scope.createFolder",
 		async () => {
 			await searchOrchestrator.searchAndCreateFolder();
 		}
 	);
 
 	const openFolderCommand = vscode.commands.registerCommand(
-		"rip-open.openFolder",
+		"rip-scope.openFolder",
 		async () => {
 			await searchOrchestrator.searchAndOpenFolder();
 		}
 	);
 
 	const clearCacheCommand = vscode.commands.registerCommand(
-		"rip-open.clearCache",
+		"rip-scope.clearCache",
 		async () => {
 			cacheManager.clearCache();
 		}
 	);
 	const resetSettingsCommand = vscode.commands.registerCommand(
-		"rip-open.resetSettings",
+		"rip-scope.resetSettings",
 		async () => {
 			await ConfigurationManager.resetSettingsToDefault();
 		}
 	);
 	const removeSelectedFolderCommand = vscode.commands.registerCommand(
-		"rip-open.removeSelectedFolder",
+		"rip-scope.removeSelectedFolder",
 		async () => {
 			await WorkspaceManager.removeSelectedFolder();
 		}
 	);
 	const replaceWithParentCommand = vscode.commands.registerCommand(
-		"rip-open.replaceWithParentFolder",
+		"rip-scope.replaceWithParentFolder",
 		async () => {
 			await WorkspaceManager.replaceWorkspaceWithParentFolder();
 		}
 	);
 
 	const openParentFolderCommand = vscode.commands.registerCommand(
-		"rip-open.openParentFolder",
+		"rip-scope.openParentFolder",
 		async () => {
 			await WorkspaceManager.openParentFolder();
 		}
 	);
 	const unifiedSearchCommand = vscode.commands.registerCommand(
-		"rip-open.unifiedSearch",
+		"rip-scope.unifiedSearch",
 		async () => {
 			await searchOrchestrator.searchAndPromptForAction();
 		}
 	);
 	const closeAndDeleteWorkspaceCommand = vscode.commands.registerCommand(
-		"rip-open.closeAndDeleteWorkspace",
+		"rip-scope.closeAndDeleteWorkspace",
 		async () => {
 			await WorkspaceManager.closeAndDeleteWorkspace();
 		}
 	);
 	const selectMoveDestinationCommand = vscode.commands.registerCommand(
-		"rip-open.selectMoveDestination",
+		"rip-scope.selectMoveDestination",
 		async () => {
 			await searchOrchestrator.searchForMoveDestination();
 		}
 	);
 	const selectCopyDestinationCommand = vscode.commands.registerCommand(
-		"rip-open.selectCopyDestination",
+		"rip-scope.selectCopyDestination",
 		async () => {
 			await searchOrchestrator.searchForCopyDestination();
 		}

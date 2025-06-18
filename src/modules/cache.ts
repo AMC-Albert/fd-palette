@@ -27,7 +27,7 @@ export class CacheManager {
 		try {
 			this.getCacheDir();
 		} catch (error) {
-			console.warn("rip-open: Failed to initialize cache directory:", error);
+			console.warn("rip-scope: Failed to initialize cache directory:", error);
 		}
 	}
 	private getCacheDir(): string {
@@ -54,10 +54,10 @@ export class CacheManager {
 		} catch (error) {
 			// Fallback to temp directory if globalStorage is not available
 			console.warn(
-				"rip-open: Could not use globalStorage, falling back to temp directory:",
+				"rip-scope: Could not use globalStorage, falling back to temp directory:",
 				error
 			);
-			const fallbackDir = path.join(os.tmpdir(), "rip-open-cache");
+			const fallbackDir = path.join(os.tmpdir(), "rip-scope-cache");
 			if (!FileUtils.existsSync(fallbackDir)) {
 				FileUtils.mkdirSync(fallbackDir);
 			}
@@ -142,7 +142,7 @@ export class CacheManager {
 			// Load from VSCode globalState
 			const globalStateKeys = this.extensionContext.globalState.keys();
 			for (const key of globalStateKeys) {
-				if (key.startsWith("rip-open-cache-")) {
+				if (key.startsWith("rip-scope-cache-")) {
 					const entry = this.extensionContext.globalState.get<CacheEntry>(key);
 					if (entry && entry.version === 1) {
 						this.memoryCache.set(entry.searchParams, entry);
@@ -206,7 +206,7 @@ export class CacheManager {
 				}
 			} catch (error) {
 				// Skip invalid files - file may be corrupted or incomplete
-				console.warn("rip-open: Failed to load cache from disk:", error);
+				console.warn("rip-scope: Failed to load cache from disk:", error);
 			}
 		}
 
@@ -267,7 +267,7 @@ export class CacheManager {
 				(this.REFRESH_BUFFER_MS - timeSinceLastRefresh) / 1000
 			);
 			console.log(
-				`rip-open: Skipping background refresh, ${remainingTime}s remaining in buffer`
+				`rip-scope: Skipping background refresh, ${remainingTime}s remaining in buffer`
 			);
 			return false;
 		}
@@ -310,7 +310,7 @@ export class CacheManager {
 		this.lastRefreshTimes.set(cacheKey, Date.now());
 
 		console.log(
-			"rip-open: Starting background cache refresh for:",
+			"rip-scope: Starting background cache refresh for:",
 			cacheKey.substring(0, 50) + "..."
 		);
 
@@ -319,7 +319,7 @@ export class CacheManager {
 		try {
 			await refreshPromise;
 		} catch (error) {
-			console.error("rip-open: Background cache refresh failed:", error);
+			console.error("rip-scope: Background cache refresh failed:", error);
 		} finally {
 			this.backgroundRefreshes.delete(cacheKey);
 		}
@@ -378,7 +378,7 @@ export class CacheManager {
 
 				const searchMethod = useFzf ? "ripgrep + fzf" : "ripgrep";
 				console.log(
-					`rip-open: Background refresh completed using ${searchMethod} - cached ${directories.length} directories`
+					`rip-scope: Background refresh completed using ${searchMethod} - cached ${directories.length} directories`
 				);
 			} finally {
 				clearTimeout(timeout);
@@ -386,7 +386,7 @@ export class CacheManager {
 			}
 		} catch (error) {
 			// Don't throw - background refresh failures shouldn't affect the user
-			console.warn("rip-open: Background refresh failed:", error);
+			console.warn("rip-scope: Background refresh failed:", error);
 		}
 	}
 	async setCachedDirectories(
@@ -415,23 +415,23 @@ export class CacheManager {
 			const globalStateStartTime = Date.now();
 			// Use simple hash for globalState key
 			const hashString = HashUtils.generateHash(cacheKey);
-			const diskCacheKey = `rip-open-cache-${hashString}`;
+			const diskCacheKey = `rip-scope-cache-${hashString}`;
 			await this.extensionContext.globalState.update(diskCacheKey, entry);
 			console.log(
-				`rip-open: GlobalState cache took ${
+				`rip-scope: GlobalState cache took ${
 					Date.now() - globalStateStartTime
 				}ms for ${directories.length} entries`
 			);
 		} else {
 			console.log(
-				`rip-open: Skipping globalState cache for large dataset (${directories.length} entries), using file cache only`
+				`rip-scope: Skipping globalState cache for large dataset (${directories.length} entries), using file cache only`
 			);
 		}
 		// Store in file-based cache for persistence across extension reloads
 		if (!this.fileCacheDisabled) {
 			// Get fresh cache directory path and ensure it exists
 			const cacheDir = this.getCacheDir();
-			console.log("rip-open: About to write cache file, cacheDir:", cacheDir);
+			console.log("rip-scope: About to write cache file, cacheDir:", cacheDir);
 
 			try {
 				// Triple-check that the directory exists before getting the file path
@@ -455,7 +455,7 @@ export class CacheManager {
 				// Additional diagnostic: check if the path is too long (Windows limitation)
 				if (process.platform === "win32" && cacheFilePath.length > 260) {
 					console.warn(
-						`rip-open: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
+						`rip-scope: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
 					);
 				}
 
@@ -463,15 +463,15 @@ export class CacheManager {
 			} catch (error: any) {
 				console.error("Error writing file cache:", error);
 				console.error(
-					"rip-open: Cache directory exists:",
+					"rip-scope: Cache directory exists:",
 					FileUtils.existsSync(cacheDir)
 				);
 				console.error(
-					"rip-open: Attempted file path:",
+					"rip-scope: Attempted file path:",
 					this.getCacheFilePath(cacheKey, cacheDir)
 				);
 				console.warn(
-					"rip-open: Disabling file cache due to persistent errors. Memory and globalState cache will continue to work."
+					"rip-scope: Disabling file cache due to persistent errors. Memory and globalState cache will continue to work."
 				);
 				this.fileCacheDisabled = true;
 			}
@@ -484,7 +484,7 @@ export class CacheManager {
 
 		// Clear VSCode globalState cache
 		this.extensionContext.globalState.keys().forEach((key) => {
-			if (key.startsWith("rip-open-cache-")) {
+			if (key.startsWith("rip-scope-cache-")) {
 				this.extensionContext.globalState.update(key, undefined);
 			}
 		});
@@ -520,7 +520,7 @@ export class CacheManager {
 		// Count VS Code globalState entries
 		const diskEntries = this.extensionContext.globalState
 			.keys()
-			.filter((key) => key.startsWith("rip-open-cache-")).length;
+			.filter((key) => key.startsWith("rip-scope-cache-")).length;
 
 		// Count file entries
 		let fileEntries = 0;
@@ -549,7 +549,7 @@ export class CacheManager {
 
 		// Note: We don't cancel ongoing background refreshes as they should complete on their own
 		console.log(
-			"rip-open: CacheManager disposed, cleared all pending refresh timers"
+			"rip-scope: CacheManager disposed, cleared all pending refresh timers"
 		);
 	}
 

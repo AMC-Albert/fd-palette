@@ -193,15 +193,15 @@ export class PathUtils {
 
 			for (const rgPath of possiblePaths) {
 				if (fs.existsSync(rgPath)) {
-					console.log(`rip-open: Found bundled ripgrep at: ${rgPath}`);
+					console.log(`rip-scope: Found bundled ripgrep at: ${rgPath}`);
 					return rgPath;
 				}
 			}
 
-			console.log("rip-open: No bundled ripgrep found in common locations");
+			console.log("rip-scope: No bundled ripgrep found in common locations");
 			return null;
 		} catch (error) {
-			console.warn("rip-open: Error detecting bundled ripgrep:", error);
+			console.warn("rip-scope: Error detecting bundled ripgrep:", error);
 			return null;
 		}
 	}
@@ -291,7 +291,7 @@ export class FileUtils {
 	static existsSync(filePath: string): boolean {
 		return this._handleSync(
 			() => fs.existsSync(filePath),
-			`rip-open: Error checking file existence for ${filePath}:`,
+			`rip-scope: Error checking file existence for ${filePath}:`,
 			false
 		);
 	}
@@ -302,7 +302,7 @@ export class FileUtils {
 	): Promise<string | null> {
 		return this._handleAsync(
 			() => fs.promises.readFile(filePath, encoding),
-			`rip-open: Error reading file ${filePath}:`,
+			`rip-scope: Error reading file ${filePath}:`,
 			null
 		);
 	}
@@ -313,7 +313,7 @@ export class FileUtils {
 	): string | null {
 		return this._handleSync(
 			() => fs.readFileSync(filePath, encoding),
-			`rip-open: Error reading file (sync) ${filePath}:`,
+			`rip-scope: Error reading file (sync) ${filePath}:`,
 			null
 		);
 	}
@@ -325,7 +325,7 @@ export class FileUtils {
 	): Promise<boolean> {
 		return this._handleAsync(
 			() => fs.promises.writeFile(filePath, data, encoding).then(() => true),
-			`rip-open: Error writing file ${filePath}:`,
+			`rip-scope: Error writing file ${filePath}:`,
 			false
 		);
 	}
@@ -336,7 +336,7 @@ export class FileUtils {
 	): Promise<boolean> {
 		return this._handleAsync(
 			() => fs.promises.mkdir(dirPath, { recursive }).then(() => true),
-			`rip-open: Error creating directory ${dirPath}:`,
+			`rip-scope: Error creating directory ${dirPath}:`,
 			false
 		);
 	}
@@ -347,7 +347,7 @@ export class FileUtils {
 				fs.mkdirSync(dirPath, { recursive });
 				return true;
 			},
-			`rip-open: Error creating directory (sync) ${dirPath}:`,
+			`rip-scope: Error creating directory (sync) ${dirPath}:`,
 			false
 		);
 	}
@@ -355,7 +355,7 @@ export class FileUtils {
 	static readdirSync(dirPath: string): string[] {
 		return this._handleSync(
 			() => fs.readdirSync(dirPath),
-			`rip-open: Error reading directory (sync) ${dirPath}:`,
+			`rip-scope: Error reading directory (sync) ${dirPath}:`,
 			[]
 		);
 	}

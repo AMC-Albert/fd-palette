@@ -5,7 +5,7 @@ import { SearchParams } from "./types";
 import { MessageUtils } from "./utils";
 
 export class ConfigurationManager {
-	private static readonly CONFIG_SECTION = "ripOpen";
+	private static readonly CONFIG_SECTION = "ripScope";
 	private static readonly PATH_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 	private static _extensionContext: vscode.ExtensionContext | undefined;
 
@@ -67,19 +67,21 @@ export class ConfigurationManager {
 				}
 			} catch (error) {
 				// Log but don't throw - continue checking other paths
-				console.warn(`rip-open: Invalid search path '${searchPath}': ${error}`);
+				console.warn(
+					`rip-scope: Invalid search path '${searchPath}': ${error}`
+				);
 			}
 		}
 
 		if (validPaths.length === 0) {
 			console.warn(
-				`rip-open: No valid directories found in searchPath: ${searchPaths.join(
+				`rip-scope: No valid directories found in searchPath: ${searchPaths.join(
 					", "
 				)}, using home directory search`
 			);
 		} else {
 			console.log(
-				`rip-open: Found ${
+				`rip-scope: Found ${
 					validPaths.length
 				} valid search paths: ${validPaths.join(", ")}`
 			);
@@ -173,7 +175,7 @@ export class ConfigurationManager {
 		// Show confirmation dialog
 		const choice = await MessageUtils.showWithActions(
 			"warning",
-			"Are you sure you want to reset all rip-open settings to their default values?",
+			"Are you sure you want to reset all rip-scope settings to their default values?",
 			"Reset Settings",
 			"Cancel"
 		);
@@ -203,7 +205,7 @@ export class ConfigurationManager {
 				)
 			);
 			await MessageUtils.showInfo(
-				"rip-open settings have been reset to default values."
+				"rip-scope settings have been reset to default values."
 			);
 			setTimeout(() => {
 				vscode.commands.executeCommand("workbench.action.closeMessages");

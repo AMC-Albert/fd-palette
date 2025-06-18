@@ -1,13 +1,13 @@
 {
-	"name": "rip-open",
+	"name": "rip-scope",
 	"author": "Albert O'Shea",
-	"publisher": "rip-open-dev",
-	"displayName": "RipOpen",
+	"publisher": "rip-scope-dev",
+	"displayName": "RipScope",
 	"description": "System-wide directory search and workspace management using ripgrep and fzf.",
 	"version": "1.1.1",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/AMC-Albert/rip-open"
+		"url": "https://github.com/AMC-Albert/rip-scope"
 	},
 	"engines": {
 		"vscode": "^1.90.0"
@@ -28,87 +28,87 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "rip-open.unifiedSearch",
+				"command": "rip-scope.unifiedSearch",
 				"title": "Search Directories",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.addToWorkspace",
+				"command": "rip-scope.addToWorkspace",
 				"title": "Add Folders to Workspace",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.replaceWorkspace",
+				"command": "rip-scope.replaceWorkspace",
 				"title": "Replace Workspace",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.replaceWithParentFolder",
+				"command": "rip-scope.replaceWithParentFolder",
 				"title": "Replace Workspace with Parent Folder",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.openParentFolder",
+				"command": "rip-scope.openParentFolder",
 				"title": "Open Parent Folder",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.createFolder",
+				"command": "rip-scope.createFolder",
 				"title": "Create Folder",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.openFolder",
+				"command": "rip-scope.openFolder",
 				"title": "Open Folder",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.clearCache",
+				"command": "rip-scope.clearCache",
 				"title": "Clear Search Cache",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.resetSettings",
+				"command": "rip-scope.resetSettings",
 				"title": "Reset Settings to Default",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.removeSelectedFolder",
+				"command": "rip-scope.removeSelectedFolder",
 				"title": "Remove Selected Folder from Workspace",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.closeAndDeleteWorkspace",
+				"command": "rip-scope.closeAndDeleteWorkspace",
 				"title": "Close and Delete Workspace",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.selectMoveDestination",
+				"command": "rip-scope.selectMoveDestination",
 				"title": "Select Move Destination",
-				"category": "RipOpen"
+				"category": "RipScope"
 			},
 			{
-				"command": "rip-open.selectCopyDestination",
+				"command": "rip-scope.selectCopyDestination",
 				"title": "Select Copy Destination",
-				"category": "RipOpen"
+				"category": "RipScope"
 			}
 		],
 		"keybindings": [
 			{
-				"command": "rip-open.unifiedSearch",
+				"command": "rip-scope.unifiedSearch",
 				"key": "ctrl+alt+s",
 				"mac": "cmd+alt+s"
 			},
 			{
-				"command": "rip-open.removeSelectedFolder",
+				"command": "rip-scope.removeSelectedFolder",
 				"key": "ctrl+shift+delete",
 				"mac": "cmd+shift+delete"
 			}
 		],
 		"configuration": {
-			"title": "RipOpen",
+			"title": "RipScope",
 			"properties": {
-				"ripOpen.searchPath": {
+				"ripScope.searchPath": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -116,7 +116,7 @@
 					"default": [],
 					"description": "List of search paths for directory search - first valid directory wins (leave empty to search from home directory)"
 				},
-				"ripOpen.excludePatterns": {
+				"ripScope.excludePatterns": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -202,47 +202,47 @@
 					],
 					"description": "Patterns to exclude from search (default includes common build/cache directories)"
 				},
-				"ripOpen.ripgrepPath": {
+				"ripScope.ripgrepPath": {
 					"type": "string",
 					"default": "auto",
 					"description": "Path to ripgrep executable (use 'auto' for automatic detection, 'rg' if in PATH, or specify full path)"
 				},
-				"ripOpen.fzfPath": {
+				"ripScope.fzfPath": {
 					"type": "string",
 					"default": "fzf",
 					"description": "Path to fzf executable (use 'fzf' if in PATH)"
 				},
-				"ripOpen.fzfOptions": {
+				"ripScope.fzfOptions": {
 					"type": "string",
 					"default": "--scheme=path --tiebreak=pathname,length --smart-case",
 					"description": "Additional options to pass to fzf for sorting and ranking behavior"
 				},
-				"ripOpen.enableCache": {
+				"ripScope.enableCache": {
 					"type": "boolean",
 					"default": true,
 					"description": "Enable caching of search results for faster subsequent searches"
 				},
-				"ripOpen.enableBackgroundRefresh": {
+				"ripScope.enableBackgroundRefresh": {
 					"type": "boolean",
 					"default": true,
 					"description": "Enable background cache refresh for better performance (automatically refreshes expired cache in background)"
 				},
-				"ripOpen.uiDisplayLimit": {
+				"ripScope.uiDisplayLimit": {
 					"type": "number",
 					"default": 100,
 					"description": "Maximum number of items to display in the UI before requiring filtering"
 				},
-				"ripOpen.boostGitRepos": {
+				"ripScope.boostGitRepos": {
 					"type": "boolean",
 					"default": true,
 					"description": "Give higher priority to git repos (folders that contain a .git folder)"
 				},
-				"ripOpen.includeWorkspaceFiles": {
+				"ripScope.includeWorkspaceFiles": {
 					"type": "boolean",
 					"default": true,
 					"description": "Include .code-workspace files in search results with high priority"
 				},
-				"ripOpen.additionalRipgrepArgs": {
+				"ripScope.additionalRipgrepArgs": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -254,12 +254,12 @@
 					],
 					"description": "Additional command-line arguments to pass to ripgrep"
 				},
-				"ripOpen.fzfFilterArgs": {
+				"ripScope.fzfFilterArgs": {
 					"type": "string",
 					"default": "--algo=v1 --tiebreak=length --no-info --no-scrollbar",
 					"description": "Additional arguments to pass to fzf in filter mode (core arguments like --filter are automatically handled)"
 				},
-				"ripOpen.fzfRankingArgs": {
+				"ripScope.fzfRankingArgs": {
 					"type": "string",
 					"default": "--print0 --read0 --no-info --no-scrollbar",
 					"description": "Arguments to pass to fzf when ranking all items without filtering"

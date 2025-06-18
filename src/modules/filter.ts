@@ -118,7 +118,7 @@ export class DirectoryFilter {
 				...userFzfOptions, // User general fzf options
 			];
 
-			console.log(`rip-open: filter.ts spawning fzf with path: ${fzfPath}`);
+			console.log(`rip-scope: filter.ts spawning fzf with path: ${fzfPath}`);
 			const fzfChild = spawn(fzfPath, fzfArgs, {
 				stdio: ["pipe", "pipe", "pipe"],
 			});
@@ -130,7 +130,7 @@ export class DirectoryFilter {
 			});
 
 			fzfChild.stderr?.on("data", (data) => {
-				console.warn(`rip-open: fzf filter error: ${data.toString()}`);
+				console.warn(`rip-scope: fzf filter error: ${data.toString()}`);
 				hasError = true;
 			});
 			fzfChild.on("close", (code) => {
@@ -196,7 +196,7 @@ export class DirectoryFilter {
 			});
 
 			fzfChild.on("error", (error) => {
-				console.warn(`rip-open: fzf spawn error: ${error.message}`);
+				console.warn(`rip-scope: fzf spawn error: ${error.message}`);
 				// Fall back to enhanced simple filtering
 				const fallbackFiltered = DirectoryFilter.fallbackFilter(
 					datasetToFilter,
@@ -440,7 +440,7 @@ export class DirectoryFilter {
 			return a.originalIndex - b.originalIndex;
 		});
 		// Debug: show top scored directories (reduced verbosity)
-		// console.log("rip-open: Top 5 scored directories:");
+		// console.log("rip-scope: Top 5 scored directories:");
 		// enhancedScores.slice(0, 5).forEach((item, index) => {
 		// 	const isGit = cacheManager
 		// 		? cacheManager.isGitRepository(item.directory.fullPath)

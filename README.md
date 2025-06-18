@@ -1,4 +1,4 @@
-# RipOpen for Visual Studio Code
+# RipScope for Visual Studio Code
 
 System-wide directory search and workspace management using [ripgrep](https://github.com/BurntSushi/ripgrep) and [fzf](https://github.com/junegunn/fzf).
 
@@ -44,7 +44,7 @@ Most commands don't have default keybindings to avoid conflicts. You can assign 
 ```json
 {
   "key": "ctrl+alt+d",
-  "command": "rip-open.addToWorkspace"
+  "command": "rip-scope.addToWorkspace"
 }
 ```
 
@@ -54,7 +54,7 @@ Most commands don't have default keybindings to avoid conflicts. You can assign 
 
 ```json
 {
-	"ripOpen.searchPath": ["C:\\Users\\username", "/home/user/projects"]
+	"ripScope.searchPath": ["C:\\Users\\username", "/home/user/projects"]
 }
 ```
 
@@ -62,9 +62,9 @@ Most commands don't have default keybindings to avoid conflicts. You can assign 
 
 ```json
 {
-	"ripOpen.enableCache": true,
-	"ripOpen.enableBackgroundRefresh": true,
-	"ripOpen.uiDisplayLimit": 100
+	"ripScope.enableCache": true,
+	"ripScope.enableBackgroundRefresh": true,
+	"ripScope.uiDisplayLimit": 100
 }
 ```
 
@@ -72,8 +72,8 @@ Most commands don't have default keybindings to avoid conflicts. You can assign 
 
 ```json
 {
-	"ripOpen.ripgrepPath": "auto", // auto-detect or specify path
-	"ripOpen.fzfPath": "fzf" // assumes fzf in PATH
+	"ripScope.ripgrepPath": "auto", // auto-detect or specify path
+	"ripScope.fzfPath": "fzf" // assumes fzf in PATH
 }
 ```
 
@@ -81,13 +81,13 @@ Most commands don't have default keybindings to avoid conflicts. You can assign 
 
 ```json
 {
-	"ripOpen.additionalRipgrepArgs": [
+	"ripScope.additionalRipgrepArgs": [
 		"--max-depth=10",
 		"--hidden",
 		"--no-ignore"
 	],
-	"ripOpen.boostGitRepos": true,
-	"ripOpen.includeWorkspaceFiles": true
+	"ripScope.boostGitRepos": true,
+	"ripScope.includeWorkspaceFiles": true
 }
 ```
 
@@ -95,9 +95,9 @@ Most commands don't have default keybindings to avoid conflicts. You can assign 
 
 ### Primary Command (Recommended)
 
-| Command                       | Default Keybinding | Description                                             |
-| ----------------------------- | ------------------ | ------------------------------------------------------- |
-| `RipOpen: Search Directories` | `Ctrl+Alt+S`       | **Unified search** - select folders, then choose action |
+| Command                        | Default Keybinding | Description                                             |
+| ------------------------------ | ------------------ | ------------------------------------------------------- |
+| `ripScope: Search Directories` | `Ctrl+Alt+S`       | **Unified search** - select folders, then choose action |
 
 After selecting directories, you'll be prompted to choose from context-aware actions:
 
@@ -110,28 +110,28 @@ After selecting directories, you'll be prompted to choose from context-aware act
 
 ### Direct Action Commands
 
-| Command                                 | Default Keybinding | Description                                        |
-| --------------------------------------- | ------------------ | -------------------------------------------------- |
-| `RipOpen: Add Directories to Workspace` | -                  | Search and add to workspace                        |
-| `RipOpen: Replace Workspace`            | -                  | Search and replace entire workspace                |
-| `RipOpen: Create Folder`                | -                  | Search and create new folder                       |
-| `RipOpen: Open Folder`                  | -                  | Search and open folder (prompts for window choice) |
+| Command                                  | Default Keybinding | Description                                        |
+| ---------------------------------------- | ------------------ | -------------------------------------------------- |
+| `ripScope: Add Directories to Workspace` | -                  | Search and add to workspace                        |
+| `ripScope: Replace Workspace`            | -                  | Search and replace entire workspace                |
+| `ripScope: Create Folder`                | -                  | Search and create new folder                       |
+| `ripScope: Open Folder`                  | -                  | Search and open folder (prompts for window choice) |
 
 ### Workspace Management Commands
 
-| Command                                          | Default Keybinding | Description                                    |
-| ------------------------------------------------ | ------------------ | ---------------------------------------------- |
-| `RipOpen: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace          |
-| `RipOpen: Replace Workspace with Parent Folder`  | -                  | Replace workspace with parent folder           |
-| `RipOpen: Open Parent Folder`                    | -                  | Open parent folder (prompts for window choice) |
-| `RipOpen: Close and Delete Workspace`            | -                  | Close workspace and delete the workspace file  |
+| Command                                           | Default Keybinding | Description                                    |
+| ------------------------------------------------- | ------------------ | ---------------------------------------------- |
+| `ripScope: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace          |
+| `ripScope: Replace Workspace with Parent Folder`  | -                  | Replace workspace with parent folder           |
+| `ripScope: Open Parent Folder`                    | -                  | Open parent folder (prompts for window choice) |
+| `ripScope: Close and Delete Workspace`            | -                  | Close workspace and delete the workspace file  |
 
 ### Utility Commands
 
-| Command                              | Default Keybinding | Description                          |
-| ------------------------------------ | ------------------ | ------------------------------------ |
-| `RipOpen: Clear Search Cache`        | -                  | Force cache refresh                  |
-| `RipOpen: Reset Settings to Default` | -                  | Reset all settings to default values |
+| Command                               | Default Keybinding | Description                          |
+| ------------------------------------- | ------------------ | ------------------------------------ |
+| `ripScope: Clear Search Cache`        | -                  | Force cache refresh                  |
+| `ripScope: Reset Settings to Default` | -                  | Reset all settings to default values |
 
 ## Performance Notes
 

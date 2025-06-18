@@ -109,7 +109,7 @@ export class DirectoryPicker {
 								); // Debug: log the first few items to verify ordering (reduced verbosity)
 								// if (index < 3) {
 								// 	console.log(
-								// 		`rip-open: UI item ${index}: ${dir.label} at ${dir.fullPath}`
+								// 		`rip-scope: UI item ${index}: ${dir.label} at ${dir.fullPath}`
 								// 	);
 								// }								// Check if this is a git repository
 								const isGitRepo = cacheManager
@@ -421,14 +421,14 @@ export class DirectoryPicker {
 		);
 
 		// Store the source directories globally for the destination selection
-		(global as any).ripOpenMoveSource = sourceDirectories;
+		(global as any).ripScopeMoveSource = sourceDirectories;
 
 		// Trigger a new unified search for destination selection
 		try {
-			await vscode.commands.executeCommand("rip-open.selectMoveDestination");
+			await vscode.commands.executeCommand("rip-scope.selectMoveDestination");
 		} catch (error) {
 			console.error(
-				"rip-open: Error executing selectMoveDestination command:",
+				"rip-scope: Error executing selectMoveDestination command:",
 				error
 			);
 			vscode.window.showErrorMessage(
@@ -446,13 +446,13 @@ export class DirectoryPicker {
 		);
 
 		// Store the source directories globally for the destination selection
-		(global as any).ripOpenCopySource = sourceDirectories;
+		(global as any).ripScopeCopySource = sourceDirectories;
 
 		// Add a small delay to potentially help with focus issues
 		await new Promise((resolve) => setTimeout(resolve, 100));
 
 		// Trigger a new unified search for destination selection
-		await vscode.commands.executeCommand("rip-open.selectCopyDestination");
+		await vscode.commands.executeCommand("rip-scope.selectCopyDestination");
 	}
 
 	static async showDestinationPicker(
@@ -491,9 +491,9 @@ export class DirectoryPicker {
 
 					// Clean up the global storage
 					if (action === DirectoryAction.Move) {
-						delete (global as any).ripOpenMoveSource;
+						delete (global as any).ripScopeMoveSource;
 					} else {
-						delete (global as any).ripOpenCopySource;
+						delete (global as any).ripScopeCopySource;
 					}
 				} catch (error) {
 					vscode.window.showErrorMessage(
