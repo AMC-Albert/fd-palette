@@ -448,26 +448,166 @@ export class DirectoryPicker {
 			);
 		}
 	}
+
 	static async showDestinationPicker(
 		directories: DirectoryItem[],
 		sourceDirectories: DirectoryItem[],
-		action: DirectoryAction.Move | DirectoryAction.Copy
+		action: DirectoryAction.Move | DirectoryAction.Copy,
+		cacheManager?: CacheManager
 	): Promise<void> {
-		const quickPick = vscode.window.createQuickPick<DirectoryItem>();
-		quickPick.items = directories;
-		quickPick.canSelectMany = false; // Only single destination selection
-
 		const actionText = action === DirectoryAction.Move ? "move" : "copy";
 		const sourceText =
 			sourceDirectories.length === 1
 				? `"${DirectoryPicker.getCleanDisplayName(sourceDirectories[0])}"`
 				: `${sourceDirectories.length} items`;
 
-		quickPick.placeholder = `Select destination folder to ${actionText} ${sourceText}`;
+		// Check if fzf is available for enhanced filtering
+		const isFzfEnabled = ConfigurationManager.isFzfEnabled();
+		const fzfPath = ConfigurationManager.getFzfPath();
+		let useFzfFiltering = false;
+
+		if (isFzfEnabled) {
+			try {
+				await DirectorySearcher.checkFzfAvailability(fzfPath);
+				useFzfFiltering = true;
+			} catch (error) {
+				// fzf not available, fall back to VS Code built-in matching
+			}
+		}
+
+		const quickPick = vscode.window.createQuickPick<DirectoryItem>();
+		quickPick.canSelectMany = false;
+
+		// Configure QuickPick based on filtering method
+		let displayDirectories = directories;
+		if (useFzfFiltering) {
+			quickPick.matchOnDescription = false;
+			quickPick.matchOnDetail = false;
+			(quickPick as any).sortByLabel = false;
+			displayDirectories = directories.map((dir, index) => ({
+				...dir,
+				sortText: `${String(index).padStart(6, "0")}`,
+			}));
+		} else {
+			quickPick.matchOnDescription = true;
+			quickPick.matchOnDetail = true;
+		}
+
+		const INITIAL_DISPLAY_LIMIT = ConfigurationManager.getUiDisplayLimit();
+		const shouldLimitInitialDisplay =
+			INITIAL_DISPLAY_LIMIT > 0 && directories.length > INITIAL_DISPLAY_LIMIT;
+		const initialItems = shouldLimitInitialDisplay
+			? displayDirectories.slice(0, INITIAL_DISPLAY_LIMIT)
+			: displayDirectories;
+		quickPick.items = initialItems;
+
+		const updatePlaceholder = () => {
+			const itemCount = quickPick.items.length;
+			const totalCount = directories.length;
+			const countText =
+				itemCount === totalCount
+					? `${totalCount} destinations`
+					: `${itemCount}/${totalCount} destinations`;
+			quickPick.placeholder = `Select destination folder to ${actionText} ${sourceText} (${countText})`;
+		};
+
+		// Reuse the existing filtering logic from showDirectoryPicker
+		let filterTimeout: NodeJS.Timeout | undefined;
+		let isFilteringInProgress = false;
+
+		quickPick.onDidChangeValue(async (value) => {
+			if (filterTimeout) {
+				clearTimeout(filterTimeout);
+			}
+			if (useFzfFiltering) {
+				if (isFilteringInProgress) {
+					return;
+				}
+
+				filterTimeout = setTimeout(async () => {
+					isFilteringInProgress = true;
+					try {
+						if (value.trim() !== "") {
+							// Use the existing DirectoryFilter.filterWithFzf method
+							const filtered = await DirectoryFilter.filterWithFzf(
+								directories,
+								value,
+								fzfPath,
+								cacheManager
+							);
+
+							// Apply the same enhancement logic as the main picker
+							const enhancedResults = filtered.map((dir, index) => {
+								const finalPosition = index;
+								const totalResults = filtered.length;
+								const positionQuality = Math.max(
+									0,
+									1 - finalPosition / totalResults
+								);
+								const isGitRepo = cacheManager
+									? cacheManager.isGitRepository(dir.fullPath)
+									: false;
+								const isWorkspaceFile = dir.itemType === ItemType.WorkspaceFile;
+								const qualityIndicator =
+									positionQuality > 0.9
+										? "★"
+										: positionQuality > 0.7
+										? "•"
+										: positionQuality > 0.3
+										? "·"
+										: "";
+
+								let typeIndicator = "";
+								if (isWorkspaceFile) {
+									typeIndicator = "$(repo) ";
+								} else if (isGitRepo) {
+									typeIndicator = "$(git-branch) ";
+								}
+
+								const enhancedLabel = `${typeIndicator}${dir.label}`;
+								const originalDescription = dir.description || dir.fullPath;
+								const enhancedDescription = qualityIndicator
+									? `${qualityIndicator} ${originalDescription}`
+									: originalDescription;
+
+								return {
+									...dir,
+									label: enhancedLabel,
+									description: enhancedDescription,
+									alwaysShow: true,
+									sortText: `${String(index).padStart(6, "0")}`,
+									filterText: `${String(index).padStart(6, "0")}_${dir.label}`,
+								};
+							});
+							quickPick.items = enhancedResults;
+						} else {
+							quickPick.items = displayDirectories;
+						}
+						updatePlaceholder();
+					} finally {
+						isFilteringInProgress = false;
+					}
+				}, 150);
+			} else {
+				// Use VS Code's built-in filtering (fallback behavior)
+				if (value.trim() !== "" && shouldLimitInitialDisplay) {
+					const filtered = directories.filter(
+						(item) =>
+							item.label.toLowerCase().includes(value.toLowerCase()) ||
+							item.description?.toLowerCase().includes(value.toLowerCase())
+					);
+					quickPick.items = filtered;
+				} else if (value.trim() === "" && shouldLimitInitialDisplay) {
+					quickPick.items = initialItems;
+				} else if (value.trim() === "" && !shouldLimitInitialDisplay) {
+					quickPick.items = directories;
+				}
+				updatePlaceholder();
+			}
+		});
 
 		quickPick.onDidAccept(async () => {
 			const selectedDestination = quickPick.activeItems[0];
-
 			if (selectedDestination) {
 				try {
 					if (action === DirectoryAction.Move) {
@@ -481,7 +621,6 @@ export class DirectoryPicker {
 							selectedDestination
 						);
 					}
-
 					// Clean up the global storage
 					if (action === DirectoryAction.Move) {
 						delete (global as any).ripScopeMoveSource;
@@ -494,7 +633,6 @@ export class DirectoryPicker {
 					);
 				}
 			}
-
 			quickPick.dispose();
 		});
 
@@ -502,6 +640,7 @@ export class DirectoryPicker {
 			quickPick.dispose();
 		});
 
+		updatePlaceholder();
 		quickPick.show();
 	}
 }

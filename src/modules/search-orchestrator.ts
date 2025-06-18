@@ -221,12 +221,12 @@ export class SearchOrchestrator {
 			const validDestinations = cachedDirectories.filter(
 				(dir) => dir.itemType !== ItemType.WorkspaceFile
 			);
-
 			if (validDestinations.length > 0) {
 				await DirectoryPicker.showDestinationPicker(
 					validDestinations,
 					sourceDirectories,
-					action
+					action,
+					this.cacheManager
 				);
 				return;
 			}
@@ -273,13 +273,12 @@ export class SearchOrchestrator {
 					await this.cacheManager.setCachedDirectories(
 						searchParams,
 						directories
-					);
-
-					// Show destination picker
+					); // Show destination picker
 					await DirectoryPicker.showDestinationPicker(
 						validDestinations,
 						sourceDirectories,
-						action
+						action,
+						this.cacheManager
 					);
 				} catch (error) {
 					if (error instanceof Error && error.message.includes("cancelled")) {
