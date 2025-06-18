@@ -2,7 +2,7 @@
 	"name": "rip-open",
 	"author": "Albert O'Shea",
 	"publisher": "rip-open-dev",
-	"displayName": "Rip Open",
+	"displayName": "RipOpen",
 	"description": "System-wide directory search and workspace management using ripgrep and fzf.",
 	"version": "1.0.0",
 	"repository": {
@@ -30,32 +30,32 @@
 			{
 				"command": "rip-open.addToWorkspace",
 				"title": "Add Directories to Workspace",
-				"category": "Rip Open"
+				"category": "RipOpen"
 			},
 			{
 				"command": "rip-open.openInCurrentWindow",
 				"title": "Open Directory in Current Window",
-				"category": "Rip Open"
+				"category": "RipOpen"
 			},
 			{
 				"command": "rip-open.openInNewWindow",
 				"title": "Open Directory in New Window",
-				"category": "Rip Open"
+				"category": "RipOpen"
 			},
 			{
 				"command": "rip-open.clearCache",
 				"title": "Clear Search Cache",
-				"category": "Rip Open"
+				"category": "RipOpen"
 			},
 			{
 				"command": "rip-open.resetSettings",
 				"title": "Reset Settings to Default",
-				"category": "Rip Open"
+				"category": "RipOpen"
 			},
 			{
 				"command": "rip-open.removeSelectedFolder",
 				"title": "Remove Selected Folder from Workspace",
-				"category": "Rip Open"
+				"category": "RipOpen"
 			}
 		],
 		"keybindings": [
@@ -81,7 +81,7 @@
 			}
 		],
 		"configuration": {
-			"title": "Rip Open",
+			"title": "RipOpen",
 			"properties": {
 				"ripOpen.searchPath": {
 					"type": "array",

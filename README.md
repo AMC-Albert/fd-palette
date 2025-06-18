@@ -1,4 +1,4 @@
-# Rip Open for Visual Studio Code
+# RipOpen for Visual Studio Code
 
 System-wide directory search and workspace management using [ripgrep](https://github.com/BurntSushi/ripgrep) and [fzf](https://github.com/junegunn/fzf).
 
@@ -31,49 +31,57 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 ## Configuration
 
 ### Search Paths
+
 ```json
 {
-    "ripOpen.searchPath": ["C:\\Users\\username", "/home/user/projects"]
+	"ripOpen.searchPath": ["C:\\Users\\username", "/home/user/projects"]
 }
 ```
 
 ### Performance Tuning
+
 ```json
 {
-    "ripOpen.enableCache": true,
-    "ripOpen.enableBackgroundRefresh": true,
-    "ripOpen.uiDisplayLimit": 100
+	"ripOpen.enableCache": true,
+	"ripOpen.enableBackgroundRefresh": true,
+	"ripOpen.uiDisplayLimit": 100
 }
 ```
 
 ### Tool Paths
+
 ```json
 {
-    "ripOpen.ripgrepPath": "auto",  // auto-detect or specify path
-    "ripOpen.fzfPath": "fzf"        // assumes fzf in PATH
+	"ripOpen.ripgrepPath": "auto", // auto-detect or specify path
+	"ripOpen.fzfPath": "fzf" // assumes fzf in PATH
 }
 ```
 
 ### Advanced Ripgrep Configuration
+
 ```json
 {
-    "ripOpen.additionalRipgrepArgs": ["--max-depth=10", "--hidden", "--no-ignore"],
-    "ripOpen.boostGitDirectories": true,
-    "ripOpen.includeWorkspaceFiles": true,
-    "ripOpen.excludeHomeDotFolders": true
+	"ripOpen.additionalRipgrepArgs": [
+		"--max-depth=10",
+		"--hidden",
+		"--no-ignore"
+	],
+	"ripOpen.boostGitDirectories": true,
+	"ripOpen.includeWorkspaceFiles": true,
+	"ripOpen.excludeHomeDotFolders": true
 }
 ```
 
 ## Commands
 
-| Command                                           | Default Keybinding | Description                           |
-| ------------------------------------------------- | ------------------ | ------------------------------------- |
-| `Rip Open: Add Directories to Workspace`          | `Ctrl+Alt+D`       | Search and add to workspace           |
-| `Rip Open: Open Directory in Current Window`      | `Ctrl+Alt+O`       | Search and open in current window     |
-| `Rip Open: Open Directory in New Window`          | `Ctrl+Alt+Shift+O` | Search and open in new window         |
-| `Rip Open: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace |
-| `Rip Open: Clear Search Cache`                    | -                  | Force cache refresh                   |
-| `Rip Open: Reset Settings to Default`             | -                  | Reset all settings to default values  |
+| Command                                          | Default Keybinding | Description                           |
+| ------------------------------------------------ | ------------------ | ------------------------------------- |
+| `RipOpen: Add Directories to Workspace`          | `Ctrl+Alt+D`       | Search and add to workspace           |
+| `RipOpen: Open Directory in Current Window`      | `Ctrl+Alt+O`       | Search and open in current window     |
+| `RipOpen: Open Directory in New Window`          | `Ctrl+Alt+Shift+O` | Search and open in new window         |
+| `RipOpen: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace |
+| `RipOpen: Clear Search Cache`                    | -                  | Force cache refresh                   |
+| `RipOpen: Reset Settings to Default`             | -                  | Reset all settings to default values  |
 
 ## Performance Notes
 
