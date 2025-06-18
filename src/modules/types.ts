@@ -36,4 +36,7 @@ export enum DirectoryAction {
 	OpenInWindow = "openInWindow",
 	CreateFolder = "createFolder",
 	PromptForAction = "promptForAction",
+	Delete = "delete",
+	Move = "move",
+	Copy = "copy",
 }

@@ -350,6 +350,27 @@ export class DirectoryPicker {
 				action: DirectoryAction.CreateFolder,
 			});
 		}
+
+		// Move and Copy actions - always available for directories
+		actionChoices.push({
+			label: "$(move) Move",
+			description: `Move ${selectionText} to another location`,
+			action: DirectoryAction.Move,
+		});
+
+		actionChoices.push({
+			label: "$(copy) Copy",
+			description: `Copy ${selectionText} to another location`,
+			action: DirectoryAction.Copy,
+		});
+
+		// Delete action - always available
+		actionChoices.push({
+			label: "$(trash) Delete",
+			description: `Permanently delete ${selectionText}`,
+			action: DirectoryAction.Delete,
+		});
+
 		const selectedAction = await vscode.window.showQuickPick(actionChoices, {
 			placeHolder: `Choose an action:`,
 			matchOnDescription: true,
@@ -372,6 +393,12 @@ export class DirectoryPicker {
 					selectedDirectories,
 					forceNewWindow
 				);
+			} else if (selectedAction.action === DirectoryAction.Delete) {
+				await WorkspaceManager.deleteDirectories(selectedDirectories);
+			} else if (selectedAction.action === DirectoryAction.Move) {
+				await DirectoryPicker.handleMoveAction(selectedDirectories);
+			} else if (selectedAction.action === DirectoryAction.Copy) {
+				await DirectoryPicker.handleCopyAction(selectedDirectories);
 			}
 		} catch (error) {
 			const actionText = selectedAction.label.replace(/^\$\([^)]+\)\s*/, ""); // Remove icon from label
@@ -384,5 +411,113 @@ export class DirectoryPicker {
 	private static getCleanDisplayName(directoryItem: DirectoryItem): string {
 		// Remove icon prefixes like "$(git-branch) ", "$(repo) " from labels
 		return directoryItem.label.replace(/^\$\([^)]+\)\s*/, "");
+	}
+	static async handleMoveAction(
+		sourceDirectories: DirectoryItem[]
+	): Promise<void> {
+		console.log(
+			"rip-open: Starting move action for",
+			sourceDirectories.length,
+			"items"
+		);
+
+		await vscode.window.showInformationMessage(
+			`Move operation: Select destination for ${sourceDirectories.length} item(s). A new search will open.`,
+			{ modal: false }
+		);
+
+		// Store the source directories globally for the destination selection
+		(global as any).ripOpenMoveSource = sourceDirectories;
+		console.log(
+			"rip-open: Stored source directories, executing selectMoveDestination command"
+		);
+
+		// Trigger a new unified search for destination selection
+		try {
+			await vscode.commands.executeCommand("rip-open.selectMoveDestination");
+			console.log(
+				"rip-open: selectMoveDestination command executed successfully"
+			);
+		} catch (error) {
+			console.error(
+				"rip-open: Error executing selectMoveDestination command:",
+				error
+			);
+			vscode.window.showErrorMessage(
+				`Failed to open destination search: ${error}`
+			);
+		}
+	}
+
+	static async handleCopyAction(
+		sourceDirectories: DirectoryItem[]
+	): Promise<void> {
+		await vscode.window.showInformationMessage(
+			`Copy operation: Select destination for ${sourceDirectories.length} item(s). A new search will open.`,
+			{ modal: false }
+		);
+
+		// Store the source directories globally for the destination selection
+		(global as any).ripOpenCopySource = sourceDirectories;
+
+		// Trigger a new unified search for destination selection
+		await vscode.commands.executeCommand("rip-open.selectCopyDestination");
+	}
+
+	static async showDestinationPicker(
+		directories: DirectoryItem[],
+		sourceDirectories: DirectoryItem[],
+		action: DirectoryAction.Move | DirectoryAction.Copy
+	): Promise<void> {
+		const quickPick = vscode.window.createQuickPick<DirectoryItem>();
+		quickPick.items = directories;
+		quickPick.canSelectMany = false; // Only single destination selection
+
+		const actionText = action === DirectoryAction.Move ? "move" : "copy";
+		const sourceText =
+			sourceDirectories.length === 1
+				? `"${DirectoryPicker.getCleanDisplayName(sourceDirectories[0])}"`
+				: `${sourceDirectories.length} items`;
+
+		quickPick.placeholder = `Select destination folder to ${actionText} ${sourceText}`;
+
+		quickPick.onDidAccept(async () => {
+			const selectedDestination = quickPick.activeItems[0];
+
+			if (selectedDestination) {
+				try {
+					if (action === DirectoryAction.Move) {
+						await WorkspaceManager.moveDirectories(
+							sourceDirectories,
+							selectedDestination
+						);
+					} else if (action === DirectoryAction.Copy) {
+						await WorkspaceManager.copyDirectories(
+							sourceDirectories,
+							selectedDestination
+						);
+					}
+
+					// Clean up the global storage
+					if (action === DirectoryAction.Move) {
+						delete (global as any).ripOpenMoveSource;
+					} else {
+						delete (global as any).ripOpenCopySource;
+					}
+				} catch (error) {
+					vscode.window.showErrorMessage(
+						`Error ${actionText}ing directories: ${error}`
+					);
+				}
+			}
+
+			quickPick.dispose();
+		});
+
+		quickPick.onDidHide(() => {
+			quickPick.dispose();
+		});
+
+		quickPick.show();
 	}
 }

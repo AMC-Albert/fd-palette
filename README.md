@@ -106,6 +106,7 @@ After selecting directories, you'll be prompted to choose from context-aware act
 - **Open in Current Window** - Replace current workspace and open folders
 - **Open in New Window** - Open folders in new VS Code window
 - **Create Folder** _(single selection only)_ - Create new folder inside selected directory
+- **Delete** - Permanently delete selected folders or workspace files
 
 ### Direct Action Commands
 

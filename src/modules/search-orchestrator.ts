@@ -6,6 +6,10 @@ import { ConfigurationManager } from "./configuration";
 import { DirectoryAction, DirectoryItem, ItemType } from "./types";
 import { MessageUtils } from "./utils";
 
+// Module-level storage for move/copy operations
+let pendingMoveItems: DirectoryItem[] = [];
+let pendingCopyItems: DirectoryItem[] = [];
+
 export class SearchOrchestrator {
 	constructor(private cacheManager: CacheManager) {}
 	async searchAndAddDirectories(): Promise<void> {
@@ -26,7 +30,6 @@ export class SearchOrchestrator {
 	async searchAndPromptForAction(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.PromptForAction);
 	}
-
 	private async performDirectorySearch(
 		action: DirectoryAction,
 		forceNewWindow: boolean = false
@@ -40,6 +43,25 @@ export class SearchOrchestrator {
 				includeWorkspaceFiles: false,
 			};
 		}
+
+		// IMPORTANT: Resolve the actual search paths that will be used
+		// This ensures the cache key matches the actual search being performed
+		const actualSearchPaths = await ConfigurationManager.getValidSearchPaths();
+		searchParams = {
+			...searchParams,
+			searchPath: actualSearchPaths,
+		};
+
+		console.log(
+			`rip-open: Original search paths: ${ConfigurationManager.getSearchParams().searchPath.join(
+				", "
+			)}`
+		);
+		console.log(
+			`rip-open: Resolved search paths for cache: ${
+				searchParams.searchPath.join(", ") || "home directory"
+			}`
+		);
 
 		// Check cache first with background refresh capability
 		const cachedDirectories = this.cacheManager.getCachedDirectoriesWithRefresh(
@@ -139,6 +161,148 @@ export class SearchOrchestrator {
 					}
 					console.error("Error during directory search:", error);
 					vscode.window.showErrorMessage(`Search failed: ${error}`);
+				}
+			}
+		);
+	}
+	async searchForMoveDestination(): Promise<void> {
+		console.log("rip-open: searchForMoveDestination called");
+		const sourceDirectories = (global as any).ripOpenMoveSource;
+		console.log("rip-open: Retrieved source directories:", sourceDirectories);
+
+		if (!sourceDirectories || sourceDirectories.length === 0) {
+			await MessageUtils.showError(
+				"No source directories found for move operation"
+			);
+			return;
+		}
+
+		console.log("rip-open: Calling performDestinationSearch for move");
+		await this.performDestinationSearch(
+			DirectoryAction.Move,
+			sourceDirectories
+		);
+	}
+
+	async searchForCopyDestination(): Promise<void> {
+		const sourceDirectories = (global as any).ripOpenCopySource;
+		if (!sourceDirectories || sourceDirectories.length === 0) {
+			await MessageUtils.showError(
+				"No source directories found for copy operation"
+			);
+			return;
+		}
+
+		await this.performDestinationSearch(
+			DirectoryAction.Copy,
+			sourceDirectories
+		);
+	}
+	private async performDestinationSearch(
+		action: DirectoryAction.Move | DirectoryAction.Copy,
+		sourceDirectories: DirectoryItem[]
+	): Promise<void> {
+		console.log(
+			"rip-open: performDestinationSearch called with action:",
+			action
+		);
+
+		let searchParams = ConfigurationManager.getSearchParams();
+
+		// For destination selection, exclude workspace files
+		searchParams = {
+			...searchParams,
+			includeWorkspaceFiles: false,
+		};
+
+		// IMPORTANT: Resolve the actual search paths that will be used
+		// This ensures the cache key matches the actual search being performed
+		const actualSearchPaths = await ConfigurationManager.getValidSearchPaths();
+		searchParams = {
+			...searchParams,
+			searchPath: actualSearchPaths,
+		};
+
+		console.log("rip-open: Checking cache for destination search");
+		// Check cache first
+		const cachedDirectories = this.cacheManager.getCachedDirectoriesWithRefresh(
+			searchParams,
+			true
+		);
+		if (cachedDirectories) {
+			console.log("rip-open: Using cached directories for destination search");
+			// Filter out workspace files
+			const validDestinations = cachedDirectories.filter(
+				(dir) => dir.itemType !== ItemType.WorkspaceFile
+			);
+
+			await DirectoryPicker.showDestinationPicker(
+				validDestinations,
+				sourceDirectories,
+				action
+			);
+			return;
+		}
+
+		console.log(
+			"rip-open: No cache found, performing fresh search for destinations"
+		);
+
+		// Perform fresh search for destinations
+		const actionText = action === DirectoryAction.Move ? "move" : "copy";
+
+		await vscode.window.withProgress(
+			{
+				location: vscode.ProgressLocation.Notification,
+				title: `Searching for ${actionText} destination...`,
+				cancellable: true,
+			},
+			async (progress, token) => {
+				try {
+					let directories: DirectoryItem[];
+
+					try {
+						directories = await DirectorySearcher.findDirectoriesWithFzf(
+							searchParams,
+							token
+						);
+					} catch (fzfError) {
+						directories = await DirectorySearcher.findDirectories(
+							searchParams,
+							token
+						);
+					}
+
+					// Filter out workspace files
+					const validDestinations = directories.filter(
+						(dir) => dir.itemType !== ItemType.WorkspaceFile
+					);
+
+					if (validDestinations.length === 0) {
+						await MessageUtils.showInfo(
+							"No valid destination directories found."
+						);
+						return;
+					}
+
+					// Cache the results
+					await this.cacheManager.setCachedDirectories(
+						searchParams,
+						directories
+					);
+
+					// Show destination picker
+					await DirectoryPicker.showDestinationPicker(
+						validDestinations,
+						sourceDirectories,
+						action
+					);
+				} catch (error) {
+					if (error instanceof Error && error.message.includes("cancelled")) {
+						return;
+					}
+					console.error("Error during destination search:", error);
+					vscode.window.showErrorMessage(`Destination search failed: ${error}`);
 				}
 			}
 		);

@@ -331,7 +331,6 @@ export class CacheManager {
 			this.backgroundRefreshes.delete(cacheKey);
 		}
 	}
-
 	/**
 	 * The actual background refresh logic - imports DirectorySearcher dynamically to avoid circular deps
 	 */
@@ -339,12 +338,35 @@ export class CacheManager {
 		try {
 			// Dynamically import to avoid circular dependency
 			const { DirectorySearcher } = await import("./directory-search.js");
+			const { ConfigurationManager } = await import("./configuration.js");
+
+			// IMPORTANT: Resolve the actual search paths that will be used
+			// This ensures consistency between cache key and actual search
+			const actualSearchPaths =
+				await ConfigurationManager.getValidSearchPaths();
+			const correctedSearchParams = {
+				...searchParams,
+				searchPath: actualSearchPaths,
+			};
+
+			console.log(
+				`rip-open: Background refresh - original paths: ${searchParams.searchPath.join(
+					", "
+				)}`
+			);
+			console.log(
+				`rip-open: Background refresh - corrected paths: ${
+					correctedSearchParams.searchPath.join(", ") || "home directory"
+				}`
+			);
 
 			// Check if ripgrep is available
 			const rgPath = await DirectorySearcher.checkRipgrepAvailability(); // Check if fzf is available
 			let useFzf = false;
 			try {
-				await DirectorySearcher.checkFzfAvailability(searchParams.fzfPath);
+				await DirectorySearcher.checkFzfAvailability(
+					correctedSearchParams.fzfPath
+				);
 				useFzf = true;
 			} catch (error) {
 				// Fzf not available, use basic ripgrep
@@ -358,21 +380,20 @@ export class CacheManager {
 			const timeout = setTimeout(() => {
 				tokenSource.cancel();
 			}, 30000); // 30 second timeout for background refresh
-
 			try {
 				// Use ripgrep with or without fzf
 				const directories = useFzf
 					? await DirectorySearcher.findDirectoriesWithFzf(
-							searchParams,
+							correctedSearchParams,
 							tokenSource.token
 					  )
 					: await DirectorySearcher.findDirectories(
-							searchParams,
+							correctedSearchParams,
 							tokenSource.token
 					  );
 
-				// Update cache with new results
-				await this.setCachedDirectories(searchParams, directories);
+				// Update cache with new results using corrected search params
+				await this.setCachedDirectories(correctedSearchParams, directories);
 
 				const searchMethod = useFzf ? "ripgrep + fzf" : "ripgrep";
 				console.log(
@@ -387,7 +408,6 @@ export class CacheManager {
 			console.warn("rip-open: Background refresh failed:", error);
 		}
 	}
-
 	async setCachedDirectories(
 		searchParams: SearchParams,
 		directories: DirectoryItem[]
@@ -403,6 +423,7 @@ export class CacheManager {
 			searchParams: cacheKey,
 			version: 1,
 		};
+
 		// Store in memory cache
 		this.memoryCache.set(cacheKey, entry);
 
@@ -446,74 +467,33 @@ export class CacheManager {
 				if (!FileUtils.existsSync(cacheDir)) {
 					throw new Error(`Failed to create cache directory: ${cacheDir}`);
 				}
-				const cacheFilePath = this.getCacheFilePath(cacheKey, cacheDir); // Check if we need to write by comparing with existing file
-				let shouldWrite = true;
-				if (FileUtils.existsSync(cacheFilePath)) {
-					try {
-						const existingContent = FileUtils.readFileSync(
-							cacheFilePath,
-							"utf8"
-						);
-						if (!existingContent) {
-							return;
-						}
-						const existingEntry = JSON.parse(existingContent) as CacheEntry;
 
-						// Quick comparison: same number of directories means likely same content
-						const sameLength =
-							existingEntry.directories.length === directories.length;
+				const cacheFilePath = this.getCacheFilePath(cacheKey, cacheDir);
+				console.log(
+					"rip-open: Writing cache file (cache skip optimization removed):",
+					cacheFilePath
+				);
+				console.log("rip-open: Cache file path length:", cacheFilePath.length);
 
-						if (sameLength) {
-							shouldWrite = false;
-							console.log(
-								`rip-open: Cache content likely unchanged (${directories.length} directories), skipping write`
-							);
-						} else {
-							console.log(
-								`rip-open: Cache size changed (${existingEntry.directories.length} -> ${directories.length}), writing update`
-							);
-						}
-					} catch (error) {
-						console.log(
-							"rip-open: Error reading existing cache file, will overwrite:",
-							error
-						);
-						shouldWrite = true;
-					}
-				} else {
-					console.log("rip-open: No existing cache file, writing new cache");
+				// Ensure parent directory of cache file exists (should be same as cacheDir)
+				const parentDir = path.dirname(cacheFilePath);
+				if (!FileUtils.existsSync(parentDir)) {
+					console.log(
+						"rip-open: Parent directory missing, creating:",
+						parentDir
+					);
+					fs.mkdirSync(parentDir, { recursive: true });
 				}
 
-				if (shouldWrite) {
-					console.log("rip-open: Writing to cache file:", cacheFilePath);
-					console.log(
-						"rip-open: Cache file path length:",
-						cacheFilePath.length
-					);
-
-					// Ensure parent directory of cache file exists (should be same as cacheDir)
-					const parentDir = path.dirname(cacheFilePath);
-					if (!FileUtils.existsSync(parentDir)) {
-						console.log(
-							"rip-open: Parent directory missing, creating:",
-							parentDir
-						);
-						fs.mkdirSync(parentDir, { recursive: true });
-					}
-
-					// Additional diagnostic: check if the path is too long (Windows limitation)
-					if (process.platform === "win32" && cacheFilePath.length > 260) {
-						console.warn(
-							`rip-open: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
-						);
-					}
-
-					fs.writeFileSync(cacheFilePath, JSON.stringify(entry), "utf8");
-					console.log(
-						"rip-open: Successfully wrote cache file:",
-						cacheFilePath
+				// Additional diagnostic: check if the path is too long (Windows limitation)
+				if (process.platform === "win32" && cacheFilePath.length > 260) {
+					console.warn(
+						`rip-open: Cache file path may be too long for Windows (${cacheFilePath.length} chars): ${cacheFilePath}`
 					);
 				}
+
+				fs.writeFileSync(cacheFilePath, JSON.stringify(entry), "utf8");
+				console.log("rip-open: Successfully wrote cache file:", cacheFilePath);
 			} catch (error: any) {
 				console.error("Error writing file cache:", error);
 				console.error(

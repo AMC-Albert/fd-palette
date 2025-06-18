@@ -81,6 +81,16 @@
 				"command": "rip-open.closeAndDeleteWorkspace",
 				"title": "Close and Delete Workspace",
 				"category": "RipOpen"
+			},
+			{
+				"command": "rip-open.selectMoveDestination",
+				"title": "Select Move Destination",
+				"category": "RipOpen"
+			},
+			{
+				"command": "rip-open.selectCopyDestination",
+				"title": "Select Copy Destination",
+				"category": "RipOpen"
 			}
 		],
 		"keybindings": [

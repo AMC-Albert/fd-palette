@@ -349,6 +349,7 @@ export class DirectorySearcher {
 			throw error;
 		}
 	}
+
 	/**
 	 * Parse ripgrep output to extract unique directories, workspace files, and fzf executables
 	 */
@@ -392,9 +393,7 @@ export class DirectorySearcher {
 					} catch {
 						// Ignore stat errors
 					}
-				}
-
-				// Extract all directory path segments from the file path
+				} // Extract all directory path segments from the file path
 				this._extractAllDirectoryPaths(filePath, directories, searchPaths);
 			}
 		}
@@ -412,6 +411,7 @@ export class DirectorySearcher {
 				// ignore errors
 			}
 		}
+
 		// Convert directories to DirectoryItem array
 		const directoryItems: DirectoryItem[] = Array.from(directories)
 			.filter((dir) => {
@@ -820,12 +820,10 @@ export class DirectorySearcher {
 
 		return currentFzfPath;
 	}
-
 	/**
 	 * Extract all directory paths from a file path and add them to the directories set.
 	 * This captures intermediate directories that might only contain subdirectories.
-	 */
-	private static _extractAllDirectoryPaths(
+	 */ private static _extractAllDirectoryPaths(
 		filePath: string,
 		directories: Set<string>,
 		searchPaths: string[]

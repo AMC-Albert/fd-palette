@@ -879,4 +879,316 @@ export class WorkspaceManager {
 
 		return { parentPath, originalPath: currentPath };
 	}
+
+	/**
+	 * Delete selected directories or workspace files
+	 */
+	static async deleteDirectories(items: DirectoryItem[]): Promise<void> {
+		// Separate workspace files from directories
+		const workspaceFiles = items.filter(
+			(item) => item.itemType === ItemType.WorkspaceFile
+		);
+		const directories = items.filter(
+			(item) => item.itemType !== ItemType.WorkspaceFile
+		);
+
+		const totalCount = items.length;
+		const itemText = totalCount === 1 ? "item" : "items";
+		const itemNames = items
+			.map((item) => path.basename(item.fullPath))
+			.join(", ");
+
+		// Confirm with the user
+		const confirmation = await vscode.window.showWarningMessage(
+			`Are you sure you want to permanently delete ${totalCount} ${itemText}?\n\n${itemNames}\n\nThis action cannot be undone.`,
+			{ modal: true },
+			"Yes, Delete",
+			"Cancel"
+		);
+
+		if (confirmation !== "Yes, Delete") {
+			return;
+		}
+
+		const fs = await import("fs/promises");
+		let deletedCount = 0;
+		const errors: string[] = [];
+
+		// Delete workspace files
+		for (const workspaceFile of workspaceFiles) {
+			try {
+				await fs.unlink(workspaceFile.fullPath);
+				deletedCount++;
+			} catch (error) {
+				errors.push(`${path.basename(workspaceFile.fullPath)}: ${error}`);
+			}
+		}
+
+		// Delete directories
+		for (const directory of directories) {
+			try {
+				await fs.rmdir(directory.fullPath, { recursive: true });
+				deletedCount++;
+			} catch (error) {
+				errors.push(`${path.basename(directory.fullPath)}: ${error}`);
+			}
+		}
+
+		// Show results
+		if (errors.length === 0) {
+			await MessageUtils.showInfo(
+				`Successfully deleted ${deletedCount} ${itemText}`
+			);
+		} else if (deletedCount > 0) {
+			await MessageUtils.showWarning(
+				`Deleted ${deletedCount} of ${totalCount} ${itemText}. Errors:\n${errors.join(
+					"\n"
+				)}`
+			);
+		} else {
+			await MessageUtils.showError(
+				`Failed to delete any items:\n${errors.join("\n")}`
+			);
+		}
+	}
+
+	/**
+	 * Move directories to a destination
+	 */
+	static async moveDirectories(
+		sourceDirectories: DirectoryItem[],
+		destination: DirectoryItem
+	): Promise<void> {
+		const fs = await import("fs/promises");
+		const path = await import("path");
+
+		const sourceNames = sourceDirectories
+			.map((dir) => path.basename(dir.fullPath))
+			.join(", ");
+		const destinationName = path.basename(destination.fullPath);
+
+		const confirmation = await vscode.window.showWarningMessage(
+			`Move ${sourceDirectories.length} item(s) (${sourceNames}) to "${destinationName}"?`,
+			{ modal: true },
+			"Move",
+			"Cancel"
+		);
+
+		if (confirmation !== "Move") {
+			return;
+		}
+
+		// Check for recursive move that would cause infinite loop
+		const { isRecursive, conflictingPaths } = this.isRecursiveOperation(
+			sourceDirectories,
+			destination.fullPath
+		);
+		if (isRecursive) {
+			const errorMessage = `Cannot move items: ${conflictingPaths.join(", ")}`;
+			await MessageUtils.showError(errorMessage);
+			return;
+		}
+
+		try {
+			const results = [];
+			for (const sourceDir of sourceDirectories) {
+				const sourceName = path.basename(sourceDir.fullPath);
+				const newPath = path.join(destination.fullPath, sourceName);
+
+				// Check if destination already exists
+				try {
+					await fs.access(newPath);
+					const overwrite = await vscode.window.showWarningMessage(
+						`"${sourceName}" already exists in destination. Overwrite?`,
+						{ modal: true },
+						"Overwrite",
+						"Skip",
+						"Cancel"
+					);
+
+					if (overwrite === "Cancel") {
+						return;
+					} else if (overwrite === "Skip") {
+						continue;
+					}
+				} catch {
+					// Destination doesn't exist, proceed
+				}
+
+				// Perform the move operation
+				await fs.rename(sourceDir.fullPath, newPath);
+				results.push(`${sourceName} → ${destinationName}`);
+			}
+
+			if (results.length > 0) {
+				await MessageUtils.showInfo(
+					`Moved ${results.length} item(s): ${results.join(", ")}`
+				);
+			}
+		} catch (error) {
+			await MessageUtils.showError(`Failed to move directories: ${error}`);
+		}
+	}
+
+	/**
+	 * Copy directories to a destination
+	 */
+	static async copyDirectories(
+		sourceDirectories: DirectoryItem[],
+		destination: DirectoryItem
+	): Promise<void> {
+		const fs = await import("fs/promises");
+		const path = await import("path");
+
+		const sourceNames = sourceDirectories
+			.map((dir) => path.basename(dir.fullPath))
+			.join(", ");
+		const destinationName = path.basename(destination.fullPath);
+
+		const confirmation = await vscode.window.showInformationMessage(
+			`Copy ${sourceDirectories.length} item(s) (${sourceNames}) to "${destinationName}"?`,
+			{ modal: true },
+			"Copy",
+			"Cancel"
+		);
+
+		if (confirmation !== "Copy") {
+			return;
+		}
+
+		// Check for recursive copy that would cause infinite loop
+		const { isRecursive, conflictingPaths } = this.isRecursiveOperation(
+			sourceDirectories,
+			destination.fullPath
+		);
+		if (isRecursive) {
+			const errorMessage = `Cannot copy items: ${conflictingPaths.join(", ")}`;
+			await MessageUtils.showError(errorMessage);
+			return;
+		}
+
+		try {
+			const results = [];
+			for (const sourceDir of sourceDirectories) {
+				const sourceName = path.basename(sourceDir.fullPath);
+				const newPath = path.join(destination.fullPath, sourceName);
+
+				// Check if destination already exists
+				try {
+					await fs.access(newPath);
+					const overwrite = await vscode.window.showWarningMessage(
+						`"${sourceName}" already exists in destination. Overwrite?`,
+						{ modal: true },
+						"Overwrite",
+						"Skip",
+						"Cancel"
+					);
+
+					if (overwrite === "Cancel") {
+						return;
+					} else if (overwrite === "Skip") {
+						continue;
+					}
+				} catch {
+					// Destination doesn't exist, proceed
+				}
+
+				// Perform the copy operation (recursive copy)
+				await this.copyRecursive(sourceDir.fullPath, newPath);
+				results.push(`${sourceName} → ${destinationName}`);
+			}
+
+			if (results.length > 0) {
+				await MessageUtils.showInfo(
+					`Copied ${results.length} item(s): ${results.join(", ")}`
+				);
+			}
+		} catch (error) {
+			await MessageUtils.showError(`Failed to copy directories: ${error}`);
+		}
+	}
+
+	/**
+	 * Recursively copy a directory
+	 */
+	private static async copyRecursive(
+		source: string,
+		destination: string
+	): Promise<void> {
+		const fs = await import("fs/promises");
+		const path = await import("path");
+
+		const stats = await fs.stat(source);
+
+		if (stats.isDirectory()) {
+			// Create destination directory
+			await fs.mkdir(destination, { recursive: true });
+
+			// Copy all contents
+			const entries = await fs.readdir(source);
+			for (const entry of entries) {
+				const sourcePath = path.join(source, entry);
+				const destPath = path.join(destination, entry);
+				await this.copyRecursive(sourcePath, destPath);
+			}
+		} else {
+			// Copy file
+			await fs.copyFile(source, destination);
+		}
+	}
+	/**
+	 * Check if a move/copy operation would create infinite recursion
+	 */
+	private static isRecursiveOperation(
+		sourceItems: DirectoryItem[],
+		destinationPath: string
+	): { isRecursive: boolean; conflictingPaths: string[] } {
+		const path = require("path");
+		const conflictingPaths: string[] = [];
+
+		for (const sourceItem of sourceItems) {
+			const sourcePath = sourceItem.fullPath;
+			const normalizedSource = path.resolve(sourcePath).replace(/[\\\/]+$/, ""); // Remove trailing slashes
+			const normalizedDestination = path
+				.resolve(destinationPath)
+				.replace(/[\\\/]+$/, "");
+
+			// Check if trying to copy/move into itself
+			if (normalizedSource === normalizedDestination) {
+				conflictingPaths.push(
+					`Cannot move/copy "${path.basename(sourcePath)}" into itself`
+				);
+				continue;
+			}
+
+			// Check if destination is inside source (would create infinite recursion)
+			// This handles cases like moving /parent into /parent/child
+			const sourcePlusSep = normalizedSource + path.sep;
+			if (normalizedDestination.startsWith(sourcePlusSep)) {
+				const relativePath = path.relative(sourcePath, destinationPath);
+				conflictingPaths.push(
+					`Cannot move/copy "${path.basename(
+						sourcePath
+					)}" into its subdirectory "${relativePath}"`
+				);
+				continue;
+			}
+
+			// Check if source is being moved/copied into its own parent with same name (would overwrite itself)
+			const sourceParent = path.dirname(normalizedSource);
+			const sourceName = path.basename(normalizedSource);
+			const targetPath = path.join(normalizedDestination, sourceName);
+
+			if (normalizedSource === path.resolve(targetPath)) {
+				conflictingPaths.push(
+					`Cannot move/copy "${sourceName}" to the same location`
+				);
+			}
+		}
+
+		return {
+			isRecursive: conflictingPaths.length > 0,
+			conflictingPaths,
+		};
+	}
 }

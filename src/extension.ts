@@ -96,6 +96,30 @@ export function activate(context: vscode.ExtensionContext) {
 			await WorkspaceManager.closeAndDeleteWorkspace();
 		}
 	);
+	const selectMoveDestinationCommand = vscode.commands.registerCommand(
+		"rip-open.selectMoveDestination",
+		async () => {
+			try {
+				console.log("rip-open: selectMoveDestination command called");
+				await searchOrchestrator.searchForMoveDestination();
+			} catch (error) {
+				console.error(
+					"rip-open: Error in selectMoveDestination command:",
+					error
+				);
+				vscode.window.showErrorMessage(
+					`Move destination selection failed: ${error}`
+				);
+			}
+		}
+	);
+
+	const selectCopyDestinationCommand = vscode.commands.registerCommand(
+		"rip-open.selectCopyDestination",
+		async () => {
+			await searchOrchestrator.searchForCopyDestination();
+		}
+	);
 	context.subscriptions.push(
 		addToWorkspaceCommand,
 		replaceWorkspaceCommand,
@@ -107,7 +131,9 @@ export function activate(context: vscode.ExtensionContext) {
 		replaceWithParentCommand,
 		openParentFolderCommand,
 		unifiedSearchCommand,
-		closeAndDeleteWorkspaceCommand
+		closeAndDeleteWorkspaceCommand,
+		selectMoveDestinationCommand,
+		selectCopyDestinationCommand
 	);
 }
 
