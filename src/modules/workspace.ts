@@ -33,42 +33,13 @@ export class WorkspaceManager {
 	static async addDirectoriesToWorkspace(
 		items: DirectoryItem[]
 	): Promise<void> {
-		// Separate workspace files from directories
-		const workspaceFiles = items.filter(
-			(item) => item.itemType === ItemType.WorkspaceFile
-		);
-		const directories = items.filter(
-			(item) => item.itemType !== ItemType.WorkspaceFile
-		);
-		// Handle workspace files - extract their folder paths
-		const extractedPaths: DirectoryItem[] = [];
-		const allInvalidPaths: string[] = [];
-		let totalWorkspacePaths = 0;
-
-		if (workspaceFiles.length > 0) {
-			for (const workspaceFile of workspaceFiles) {
-				try {
-					const result = await this.extractPathsFromWorkspaceFile(
-						workspaceFile.fullPath
-					);
-					extractedPaths.push(...result.extractedDirectories);
-					allInvalidPaths.push(...result.invalidPaths);
-					totalWorkspacePaths += result.totalPaths;
-				} catch (error) {
-					console.warn(
-						`rip-open: Failed to extract paths from ${workspaceFile.fullPath}:`,
-						error
-					);
-					vscode.window.showWarningMessage(
-						`Failed to process workspace file: ${path.basename(
-							workspaceFile.fullPath
-						)}`
-					);
-				}
-			}
-		}
-		// Combine regular directories with extracted workspace paths
-		const allDirectories = [...directories, ...extractedPaths];
+		const {
+			allDirectories,
+			extractedPaths,
+			allInvalidPaths,
+			workspaceFiles,
+			totalWorkspacePaths,
+		} = await this.processDirectoryItems(items);
 
 		if (allDirectories.length === 0) {
 			if (workspaceFiles.length > 0 && allInvalidPaths.length > 0) {
@@ -87,10 +58,9 @@ export class WorkspaceManager {
 				);
 			}
 			return;
-		}
-
-		// Handle directories normally
+		} // Handle directories normally
 		const workspaceFolders = vscode.workspace.workspaceFolders || [];
+
 		const existingPaths = new Set(
 			workspaceFolders.map((folder) => folder.uri.fsPath.toLowerCase())
 		);
@@ -121,14 +91,13 @@ export class WorkspaceManager {
 				await MessageUtils.showInfo(message);
 			}
 			return;
-		}
-
-		// Add folders to workspace
+		} // Add folders to workspace
 		const success = vscode.workspace.updateWorkspaceFolders(
 			workspaceFolders.length, // Start index (append to end)
 			0, // Delete count
 			...newFolders.map((uri) => ({ uri }))
 		);
+
 		if (success) {
 			const folderNames = newFolders
 				.map((uri) => path.basename(uri.fsPath))
@@ -140,6 +109,7 @@ export class WorkspaceManager {
 			}
 
 			vscode.window.showInformationMessage(message);
+			console.log(`rip-open: ${message}`);
 
 			// Show warning about invalid paths if any were found
 			if (allInvalidPaths.length > 0) {
@@ -153,6 +123,7 @@ export class WorkspaceManager {
 				);
 			}
 		} else {
+			console.error(`rip-open: Failed to add directories to workspace`);
 			await MessageUtils.showError("Failed to add directories to workspace.");
 		}
 	}
@@ -313,6 +284,207 @@ export class WorkspaceManager {
 	}
 
 	/**
+	 * Remove all existing workspace folders
+	 */
+	static async removeAllWorkspaceFolders(): Promise<void> {
+		const workspaceFolders = vscode.workspace.workspaceFolders;
+		if (!workspaceFolders || workspaceFolders.length === 0) {
+			return; // No folders to remove
+		}
+
+		// Remove all existing folders
+		const success = vscode.workspace.updateWorkspaceFolders(
+			0, // Start index (from beginning)
+			workspaceFolders.length // Delete count (remove all)
+		);
+
+		if (success) {
+			console.log(
+				`rip-open: Removed ${workspaceFolders.length} existing workspace folders`
+			);
+		} else {
+			throw new Error("Failed to remove existing workspace folders");
+		}
+	}
+	/**
+	 * Replace all workspace folders with new ones (remove existing + add new)
+	 */
+	static async replaceWorkspaceFolders(items: DirectoryItem[]): Promise<void> {
+		try {
+			console.log(
+				`rip-open: Starting replaceWorkspaceFolders with ${items.length} items`
+			);
+
+			const {
+				allDirectories,
+				extractedPaths,
+				allInvalidPaths,
+				workspaceFiles,
+				totalWorkspacePaths,
+			} = await this.processDirectoryItems(items);
+
+			if (allDirectories.length === 0) {
+				if (workspaceFiles.length > 0 && allInvalidPaths.length > 0) {
+					// Specific error for workspace files with invalid paths
+					const invalidPathsList = allInvalidPaths.slice(0, 3).join(", ");
+					const moreText =
+						allInvalidPaths.length > 3
+							? ` and ${allInvalidPaths.length - 3} more`
+							: "";
+					vscode.window.showWarningMessage(
+						`No valid directories found in workspace file(s). Invalid paths: ${invalidPathsList}${moreText}`
+					);
+				} else {
+					await MessageUtils.showInfo(
+						"No valid directories found to replace workspace with."
+					);
+				}
+				return;
+			}
+			const workspaceFolders = vscode.workspace.workspaceFolders || [];
+			const currentFolderCount = workspaceFolders.length;
+
+			console.log(
+				`rip-open: Current workspace has ${currentFolderCount} folders`
+			);
+
+			// Check if we're trying to replace with the exact same folders
+			const currentPaths = new Set(
+				workspaceFolders.map((folder) => folder.uri.fsPath.toLowerCase())
+			);
+			const newPaths = new Set(
+				allDirectories.map((item) => item.fullPath.toLowerCase())
+			);
+
+			// Compare sets to see if they're identical
+			const sameSize = currentPaths.size === newPaths.size;
+			const sameContent =
+				sameSize &&
+				Array.from(currentPaths).every((path) => newPaths.has(path));
+
+			if (sameContent) {
+				let message = `Workspace already contains these ${allDirectories.length} folder(s)`;
+				if (workspaceFiles.length > 0) {
+					message += ` (${extractedPaths.length} extracted from ${workspaceFiles.length} workspace file(s))`;
+				}
+				vscode.window.showInformationMessage(message);
+				console.log(`rip-open: ${message} - no changes needed`);
+				return;
+			}
+
+			// Create workspace folder objects for the directories (both regular and extracted)
+			const newWorkspaceFolders = allDirectories.map((item) => ({
+				uri: vscode.Uri.file(item.fullPath),
+			}));
+
+			console.log(
+				`rip-open: Will replace with ${
+					allDirectories.length
+				} folders: ${allDirectories.map((item) => item.fullPath).join(", ")}`
+			);
+
+			// Replace all existing folders with new ones in a single operation
+			const success = vscode.workspace.updateWorkspaceFolders(
+				0, // start index (remove from beginning)
+				currentFolderCount, // delete count (remove all existing)
+				...newWorkspaceFolders // add new folders
+			);
+
+			console.log(`rip-open: updateWorkspaceFolders result: ${success}`);
+
+			if (success) {
+				let message = `Replaced workspace with ${allDirectories.length} folder(s)`;
+				if (workspaceFiles.length > 0) {
+					message += ` (${extractedPaths.length} extracted from ${workspaceFiles.length} workspace file(s))`;
+				}
+
+				vscode.window.showInformationMessage(message);
+				console.log(`rip-open: Completed replaceWorkspaceFolders - ${message}`);
+
+				// Show warning about invalid paths if any were found
+				if (allInvalidPaths.length > 0) {
+					const invalidPathsList = allInvalidPaths.slice(0, 2).join(", ");
+					const moreText =
+						allInvalidPaths.length > 2
+							? ` and ${allInvalidPaths.length - 2} more`
+							: "";
+					vscode.window.showWarningMessage(
+						`Note: ${allInvalidPaths.length} path(s) from workspace file(s) were invalid: ${invalidPathsList}${moreText}`
+					);
+				}
+			} else {
+				const errorMsg = "Failed to replace workspace folders";
+				console.error(`rip-open: ${errorMsg}`);
+				await MessageUtils.showError(errorMsg);
+			}
+		} catch (error) {
+			console.error(`rip-open: Error in replaceWorkspaceFolders:`, error);
+			await MessageUtils.showError(
+				`Failed to replace workspace folders: ${error}`
+			);
+			throw error;
+		}
+	}
+
+	/**
+	 * Process directory items, extracting paths from workspace files and combining with regular directories
+	 */
+	private static async processDirectoryItems(items: DirectoryItem[]): Promise<{
+		allDirectories: DirectoryItem[];
+		extractedPaths: DirectoryItem[];
+		allInvalidPaths: string[];
+		workspaceFiles: DirectoryItem[];
+		totalWorkspacePaths: number;
+	}> {
+		// Separate workspace files from directories
+		const workspaceFiles = items.filter(
+			(item) => item.itemType === ItemType.WorkspaceFile
+		);
+		const directories = items.filter(
+			(item) => item.itemType !== ItemType.WorkspaceFile
+		);
+
+		// Handle workspace files - extract their folder paths
+		const extractedPaths: DirectoryItem[] = [];
+		const allInvalidPaths: string[] = [];
+		let totalWorkspacePaths = 0;
+
+		if (workspaceFiles.length > 0) {
+			for (const workspaceFile of workspaceFiles) {
+				try {
+					const result = await this.extractPathsFromWorkspaceFile(
+						workspaceFile.fullPath
+					);
+					extractedPaths.push(...result.extractedDirectories);
+					allInvalidPaths.push(...result.invalidPaths);
+					totalWorkspacePaths += result.totalPaths;
+				} catch (error) {
+					console.warn(
+						`rip-open: Failed to extract paths from ${workspaceFile.fullPath}:`,
+						error
+					);
+					vscode.window.showWarningMessage(
+						`Failed to process workspace file: ${path.basename(
+							workspaceFile.fullPath
+						)}`
+					);
+				}
+			}
+		}
+
+		// Combine regular directories with extracted workspace paths
+		const allDirectories = [...directories, ...extractedPaths];
+
+		return {
+			allDirectories,
+			extractedPaths,
+			allInvalidPaths,
+			workspaceFiles,
+			totalWorkspacePaths,
+		};
+	}
+
+	/**
 	 * Get the currently selected folder from the explorer using clipboard method
 	 */
 	private static async getSelectedFolderFromExplorer(): Promise<
@@ -344,7 +516,8 @@ export class WorkspaceManager {
 
 	/**
 	 * Extract folder paths from a .code-workspace file
-	 */ private static async extractPathsFromWorkspaceFile(
+	 */
+	private static async extractPathsFromWorkspaceFile(
 		workspaceFilePath: string
 	): Promise<{
 		extractedDirectories: DirectoryItem[];

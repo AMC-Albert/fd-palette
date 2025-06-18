@@ -13,7 +13,9 @@ System-wide directory search and workspace management using [ripgrep](https://gi
 - **Intelligent caching**: Results cached for 2 minutes with automatic background refresh.
 - **Enhanced fuzzy matching**: Optional fzf integration for superior search quality.
 - **Multi-path search**: Search across multiple root directories simultaneously.
-- **Workspace support**: Open .code-workspace files directly, or extract and add their folder paths to the current workspace.
+- **Workspace management**:
+  - Add directories to workspace or replace entire workspace with new selections.
+  - Open .code-workspace files directly, or extract and add their folder paths to the current workspace.
 
 ## Search Interface
 
@@ -76,6 +78,7 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 | Command                                          | Default Keybinding | Description                           |
 | ------------------------------------------------ | ------------------ | ------------------------------------- |
 | `RipOpen: Add Directories to Workspace`          | `Ctrl+Alt+D`       | Search and add to workspace           |
+| `RipOpen: Replace Workspace`                     | `Ctrl+Alt+R`       | Search and replace entire workspace   |
 | `RipOpen: Open Directory in Current Window`      | `Ctrl+Alt+O`       | Search and open in current window     |
 | `RipOpen: Open Directory in New Window`          | `Ctrl+Alt+Shift+O` | Search and open in new window         |
 | `RipOpen: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace |

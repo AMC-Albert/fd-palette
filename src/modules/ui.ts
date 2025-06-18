@@ -58,7 +58,9 @@ export class DirectoryPicker {
 				: displayDirectories;
 
 		quickPick.items = initialItems;
-		quickPick.canSelectMany = action === DirectoryAction.AddToWorkspace;
+		quickPick.canSelectMany =
+			action === DirectoryAction.AddToWorkspace ||
+			action === DirectoryAction.ReplaceWorkspace;
 
 		const updatePlaceholder = () => {
 			const searchTerm = quickPick.value.trim();
@@ -199,6 +201,8 @@ export class DirectoryPicker {
 				try {
 					if (action === DirectoryAction.AddToWorkspace) {
 						await WorkspaceManager.addDirectoriesToWorkspace(itemsToProcess);
+					} else if (action === DirectoryAction.ReplaceWorkspace) {
+						await WorkspaceManager.replaceWorkspaceFolders(itemsToProcess);
 					} else {
 						// For OpenInWindow action, use the forceNewWindow parameter
 						await WorkspaceManager.openDirectoriesInNewWindow(
@@ -208,7 +212,11 @@ export class DirectoryPicker {
 					}
 				} catch (error) {
 					const actionText =
-						action === DirectoryAction.AddToWorkspace ? "adding" : "opening";
+						action === DirectoryAction.AddToWorkspace
+							? "adding"
+							: action === DirectoryAction.ReplaceWorkspace
+							? "replacing"
+							: "opening";
 					vscode.window.showErrorMessage(
 						`Error ${actionText} directories: ${error}`
 					);

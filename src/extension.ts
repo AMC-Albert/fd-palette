@@ -33,6 +33,13 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	);
 
+	const replaceWorkspaceCommand = vscode.commands.registerCommand(
+		"rip-open.replaceWorkspace",
+		async () => {
+			await searchOrchestrator.searchAndReplaceWorkspace();
+		}
+	);
+
 	const openInCurrentWindowCommand = vscode.commands.registerCommand(
 		"rip-open.openInCurrentWindow",
 		async () => {
@@ -67,6 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 	context.subscriptions.push(
 		addToWorkspaceCommand,
+		replaceWorkspaceCommand,
 		openInCurrentWindowCommand,
 		openInNewWindowCommand,
 		clearCacheCommand,

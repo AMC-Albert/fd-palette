@@ -33,6 +33,11 @@
 				"category": "RipOpen"
 			},
 			{
+				"command": "rip-open.replaceWorkspace",
+				"title": "Replace Workspace",
+				"category": "RipOpen"
+			},
+			{
 				"command": "rip-open.openInCurrentWindow",
 				"title": "Open Directory in Current Window",
 				"category": "RipOpen"
@@ -63,6 +68,11 @@
 				"command": "rip-open.addToWorkspace",
 				"key": "ctrl+alt+d",
 				"mac": "cmd+alt+d"
+			},
+			{
+				"command": "rip-open.replaceWorkspace",
+				"key": "ctrl+alt+r",
+				"mac": "cmd+alt+r"
 			},
 			{
 				"command": "rip-open.openInCurrentWindow",

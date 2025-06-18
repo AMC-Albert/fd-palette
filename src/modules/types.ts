@@ -32,5 +32,6 @@ export interface SearchParams {
 
 export enum DirectoryAction {
 	AddToWorkspace = "addToWorkspace",
+	ReplaceWorkspace = "replaceWorkspace",
 	OpenInWindow = "openInWindow",
 }

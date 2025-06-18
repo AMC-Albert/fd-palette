@@ -12,6 +12,10 @@ export class SearchOrchestrator {
 		await this.performDirectorySearch(DirectoryAction.AddToWorkspace);
 	}
 
+	async searchAndReplaceWorkspace(): Promise<void> {
+		await this.performDirectorySearch(DirectoryAction.ReplaceWorkspace);
+	}
+
 	async searchAndOpenInCurrentWindow(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.OpenInWindow, false);
 	}
@@ -56,6 +60,8 @@ export class SearchOrchestrator {
 		const actionText =
 			action === DirectoryAction.AddToWorkspace
 				? "adding to workspace"
+				: action === DirectoryAction.ReplaceWorkspace
+				? "replacing workspace"
 				: "opening";
 
 		await vscode.window.withProgress(
