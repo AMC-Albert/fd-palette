@@ -5,83 +5,13 @@ import * as os from "os";
 import * as fs from "fs";
 import { DirectoryItem, SearchParams, ItemType } from "./types";
 import { ConfigurationManager } from "./configuration";
+import { PathUtils } from "./utils";
 
 export class DirectorySearcher {
 	private static _extensionContext: vscode.ExtensionContext | undefined;
 
 	static setExtensionContext(context: vscode.ExtensionContext): void {
 		this._extensionContext = context;
-	}
-
-	/**
-	 * Attempts to find VS Code's bundled ripgrep executable
-	 */
-	static getBundledRipgrepPath(): string | null {
-		try {
-			// Try to get VS Code's installation path
-			const possiblePaths = [
-				// VS Code Insiders
-				path.join(
-					os.homedir(),
-					"AppData",
-					"Local",
-					"Programs",
-					"Microsoft VS Code Insiders",
-					"resources",
-					"app",
-					"node_modules",
-					"@vscode",
-					"ripgrep",
-					"bin",
-					"rg.exe"
-				),
-				// Regular VS Code
-				path.join(
-					os.homedir(),
-					"AppData",
-					"Local",
-					"Programs",
-					"Microsoft VS Code",
-					"resources",
-					"app",
-					"node_modules",
-					"@vscode",
-					"ripgrep",
-					"bin",
-					"rg.exe"
-				),
-				// VS Code Portable
-				path.join(
-					process.env.VSCODE_PORTABLE || "",
-					"resources",
-					"app",
-					"node_modules",
-					"@vscode",
-					"ripgrep",
-					"bin",
-					"rg.exe"
-				),
-				// macOS paths
-				"/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/node_modules/@vscode/ripgrep/bin/rg",
-				"/Applications/Visual Studio Code.app/Contents/Resources/app/node_modules/@vscode/ripgrep/bin/rg",
-				// Linux paths
-				"/usr/share/code/resources/app/node_modules/@vscode/ripgrep/bin/rg",
-				"/opt/visual-studio-code/resources/app/node_modules/@vscode/ripgrep/bin/rg",
-			];
-
-			for (const rgPath of possiblePaths) {
-				if (fs.existsSync(rgPath)) {
-					console.log(`rip-open: Found bundled ripgrep at: ${rgPath}`);
-					return rgPath;
-				}
-			}
-
-			console.log("rip-open: No bundled ripgrep found in common locations");
-			return null;
-		} catch (error) {
-			console.warn("rip-open: Error detecting bundled ripgrep:", error);
-			return null;
-		}
 	}
 	/**
 	 * Check if ripgrep is available (either bundled or in PATH)
@@ -167,9 +97,8 @@ export class DirectorySearcher {
 				);
 			}
 		}
-
 		// Auto mode: try bundled ripgrep first, then system ripgrep
-		const bundledRg = this.getBundledRipgrepPath();
+		const bundledRg = PathUtils.getBundledRipgrepPath();
 		if (bundledRg) {
 			try {
 				await this._runRipgrepAvailabilityCheck(bundledRg);
