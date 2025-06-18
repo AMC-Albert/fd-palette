@@ -425,6 +425,45 @@ export class MessageUtils {
 				return await vscode.window.showInformationMessage(message, ...actions);
 		}
 	}
+	/**
+	 * Show a success message with "Open with Code" and "Add to Workspace" action buttons
+	 * @param message The success message to display
+	 * @param items Array of DirectoryItem objects for the actions, or a single folder path string
+	 * @param addToWorkspaceCallback Optional callback function to handle adding to workspace
+	 */
+	static async showFolderActionDialog(
+		message: string,
+		items: any[] | string,
+		addToWorkspaceCallback?: () => Promise<void>
+	): Promise<void> {
+		const choice = await vscode.window.showInformationMessage(
+			message,
+			"Open with Code",
+			"Add to Workspace"
+		);
+
+		if (choice === "Open with Code") {
+			let folderPath: string;
+			if (typeof items === "string") {
+				folderPath = items;
+			} else if (items.length === 1) {
+				// Single item - open it directly
+				folderPath = items[0].fullPath || items[0];
+			} else {
+				// Multiple items - open the parent directory
+				const firstPath = items[0].fullPath || items[0];
+				folderPath = require("path").dirname(firstPath);
+			}
+
+			await vscode.commands.executeCommand(
+				"vscode.openFolder",
+				vscode.Uri.file(folderPath),
+				false // Open in current window
+			);
+		} else if (choice === "Add to Workspace" && addToWorkspaceCallback) {
+			await addToWorkspaceCallback();
+		}
+	}
 }
 
 export class HashUtils {

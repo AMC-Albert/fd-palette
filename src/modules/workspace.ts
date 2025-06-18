@@ -771,33 +771,25 @@ export class WorkspaceManager {
 					)}`
 				);
 				return;
-			}
+			} // Create the folder
+			await FileUtils.createDirectory(newFolderPath);
 
-			// Create the folder
-			await FileUtils.createDirectory(newFolderPath); // Show success message and offer to open
-			const openChoice = await vscode.window.showInformationMessage(
+			// Show success message with action buttons
+			await MessageUtils.showFolderActionDialog(
 				`Created folder "${folderName}" in ${path.basename(
 					directoryItem.fullPath
 				)}`,
-				"Open with Code",
-				"Add to Workspace"
+				newFolderPath,
+				async () => {
+					const newDirectoryItem: DirectoryItem = {
+						label: folderName,
+						description: newFolderPath,
+						fullPath: newFolderPath,
+						itemType: ItemType.Directory,
+					};
+					await this.addDirectoriesToWorkspace([newDirectoryItem]);
+				}
 			);
-
-			if (openChoice === "Open with Code") {
-				await vscode.commands.executeCommand(
-					"vscode.openFolder",
-					vscode.Uri.file(newFolderPath),
-					false // Open in current window
-				);
-			} else if (openChoice === "Add to Workspace") {
-				const newDirectoryItem: DirectoryItem = {
-					label: folderName,
-					description: newFolderPath,
-					fullPath: newFolderPath,
-					itemType: ItemType.Directory,
-				};
-				await this.addDirectoriesToWorkspace([newDirectoryItem]);
-			}
 		} catch (error) {
 			await MessageUtils.showError(`Failed to create folder: ${error}`);
 			throw error;
@@ -979,20 +971,20 @@ export class WorkspaceManager {
 		if (confirmation !== "Move") {
 			return;
 		}
-
 		// Check for recursive move that would cause infinite loop
 		const { isRecursive, conflictingPaths } = this.isRecursiveOperation(
 			sourceDirectories,
-			destination.fullPath
+			destination.fullPath,
+			true // This is a move operation
 		);
 		if (isRecursive) {
 			const errorMessage = `Cannot move items: ${conflictingPaths.join(", ")}`;
 			await MessageUtils.showError(errorMessage);
 			return;
 		}
-
 		try {
 			const results = [];
+			const movedItems: DirectoryItem[] = [];
 			for (const sourceDir of sourceDirectories) {
 				const sourceName = path.basename(sourceDir.fullPath);
 				const newPath = path.join(destination.fullPath, sourceName);
@@ -1020,11 +1012,23 @@ export class WorkspaceManager {
 				// Perform the move operation
 				await fs.rename(sourceDir.fullPath, newPath);
 				results.push(`${sourceName} → ${destinationName}`);
-			}
 
+				// Track the moved item
+				movedItems.push({
+					label: sourceName,
+					description: newPath,
+					fullPath: newPath,
+					itemType: sourceDir.itemType,
+				});
+			}
 			if (results.length > 0) {
-				await MessageUtils.showInfo(
-					`Moved ${results.length} item(s): ${results.join(", ")}`
+				// Show success message with action buttons
+				await MessageUtils.showFolderActionDialog(
+					`Moved ${results.length} item(s): ${results.join(", ")}`,
+					movedItems,
+					async () => {
+						await this.addDirectoriesToWorkspace(movedItems);
+					}
 				);
 			}
 		} catch (error) {
@@ -1041,14 +1045,22 @@ export class WorkspaceManager {
 	): Promise<void> {
 		const fs = await import("fs/promises");
 		const path = await import("path");
-
 		const sourceNames = sourceDirectories
 			.map((dir) => path.basename(dir.fullPath))
 			.join(", ");
 		const destinationName = path.basename(destination.fullPath);
 
+		// Check if any sources are being copied within the same directory
+		const hasSameDirectoryCopies = sourceDirectories.some(
+			(sourceDir) => path.dirname(sourceDir.fullPath) === destination.fullPath
+		);
+
+		const confirmationMessage = hasSameDirectoryCopies
+			? `Copy ${sourceDirectories.length} item(s) (${sourceNames}) within "${destinationName}" with auto-generated names?`
+			: `Copy ${sourceDirectories.length} item(s) (${sourceNames}) to "${destinationName}"?`;
+
 		const confirmation = await vscode.window.showInformationMessage(
-			`Copy ${sourceDirectories.length} item(s) (${sourceNames}) to "${destinationName}"?`,
+			confirmationMessage,
 			{ modal: true },
 			"Copy",
 			"Cancel"
@@ -1057,52 +1069,81 @@ export class WorkspaceManager {
 		if (confirmation !== "Copy") {
 			return;
 		}
-
 		// Check for recursive copy that would cause infinite loop
 		const { isRecursive, conflictingPaths } = this.isRecursiveOperation(
 			sourceDirectories,
-			destination.fullPath
+			destination.fullPath,
+			false // This is a copy operation
 		);
 		if (isRecursive) {
 			const errorMessage = `Cannot copy items: ${conflictingPaths.join(", ")}`;
 			await MessageUtils.showError(errorMessage);
 			return;
 		}
-
 		try {
 			const results = [];
+			const copiedItems: DirectoryItem[] = [];
 			for (const sourceDir of sourceDirectories) {
 				const sourceName = path.basename(sourceDir.fullPath);
-				const newPath = path.join(destination.fullPath, sourceName);
+				const sourceParent = path.dirname(sourceDir.fullPath);
+				const isSameDirectory = sourceParent === destination.fullPath;
 
-				// Check if destination already exists
-				try {
-					await fs.access(newPath);
-					const overwrite = await vscode.window.showWarningMessage(
-						`"${sourceName}" already exists in destination. Overwrite?`,
-						{ modal: true },
-						"Overwrite",
-						"Skip",
-						"Cancel"
+				let targetName: string;
+				let newPath: string;
+
+				if (isSameDirectory) {
+					// Copying within the same directory - generate unique name with suffix
+					targetName = await this.generateCopyName(
+						sourceDir.fullPath,
+						destination.fullPath
 					);
+					newPath = path.join(destination.fullPath, targetName);
+				} else {
+					// Copying to different directory - handle conflicts normally
+					targetName = sourceName;
+					newPath = path.join(destination.fullPath, sourceName);
 
-					if (overwrite === "Cancel") {
-						return;
-					} else if (overwrite === "Skip") {
-						continue;
+					// Check if destination already exists
+					try {
+						await fs.access(newPath);
+						const overwrite = await vscode.window.showWarningMessage(
+							`"${sourceName}" already exists in destination. Overwrite?`,
+							{ modal: true },
+							"Overwrite",
+							"Skip",
+							"Cancel"
+						);
+
+						if (overwrite === "Cancel") {
+							return;
+						} else if (overwrite === "Skip") {
+							continue;
+						}
+					} catch {
+						// Destination doesn't exist, proceed
 					}
-				} catch {
-					// Destination doesn't exist, proceed
 				}
 
 				// Perform the copy operation (recursive copy)
 				await this.copyRecursive(sourceDir.fullPath, newPath);
-				results.push(`${sourceName} → ${destinationName}`);
-			}
+				results.push(`${sourceName} → ${targetName}`);
 
+				// Track the copied item
+				copiedItems.push({
+					label: targetName,
+					description: newPath,
+					fullPath: newPath,
+					itemType: sourceDir.itemType,
+				});
+			}
 			if (results.length > 0) {
-				await MessageUtils.showInfo(
-					`Copied ${results.length} item(s): ${results.join(", ")}`
+				// Show success message with action buttons
+				await MessageUtils.showFolderActionDialog(
+					`Copied ${results.length} item(s): ${results.join(", ")}`,
+					copiedItems,
+					async () => {
+						await this.addDirectoriesToWorkspace(copiedItems);
+					}
 				);
 			}
 		} catch (error) {
@@ -1138,12 +1179,14 @@ export class WorkspaceManager {
 			await fs.copyFile(source, destination);
 		}
 	}
+
 	/**
 	 * Check if a move/copy operation would create infinite recursion
 	 */
 	private static isRecursiveOperation(
 		sourceItems: DirectoryItem[],
-		destinationPath: string
+		destinationPath: string,
+		isMovingOperation: boolean = false
 	): { isRecursive: boolean; conflictingPaths: string[] } {
 		const path = require("path");
 		const conflictingPaths: string[] = [];
@@ -1182,9 +1225,14 @@ export class WorkspaceManager {
 			const targetPath = path.join(normalizedDestination, sourceName);
 
 			if (normalizedSource === path.resolve(targetPath)) {
-				conflictingPaths.push(
-					`Cannot move/copy "${sourceName}" to the same location`
-				);
+				// For copy operations within the same directory, allow it (will be handled with suffix)
+				// For move operations, this is an error
+				if (isMovingOperation) {
+					conflictingPaths.push(
+						`Cannot move "${sourceName}" to the same location`
+					);
+				}
+				// For copy operations, this is allowed and will be handled by generateCopyName
 			}
 		}
 
@@ -1192,5 +1240,58 @@ export class WorkspaceManager {
 			isRecursive: conflictingPaths.length > 0,
 			conflictingPaths,
 		};
+	}
+
+	/**
+	 * Generate a unique copy name by adding or incrementing a suffix
+	 */
+	private static async generateCopyName(
+		originalPath: string,
+		destinationDir: string
+	): Promise<string> {
+		const fs = await import("fs/promises");
+		const path = await import("path");
+
+		const originalName = path.basename(originalPath);
+		const baseDestPath = path.join(destinationDir, originalName);
+
+		// If the destination doesn't exist, use the original name
+		try {
+			await fs.access(baseDestPath);
+		} catch {
+			return originalName;
+		}
+
+		// Extract base name and existing suffix if any
+		const copyRegex = /^(.+?)(_copy(\d{3}))?$/;
+		const match = originalName.match(copyRegex);
+		const baseName = match ? match[1] : originalName;
+
+		// Find the next available number
+		let copyNumber = 1;
+		let newName: string;
+		let newPath: string;
+
+		do {
+			const suffix = `_copy${String(copyNumber).padStart(3, "0")}`;
+			newName = `${baseName}${suffix}`;
+			newPath = path.join(destinationDir, newName);
+
+			try {
+				await fs.access(newPath);
+				copyNumber++;
+			} catch {
+				// Path doesn't exist, we can use this name
+				break;
+			}
+		} while (copyNumber <= 999); // Prevent infinite loop
+
+		if (copyNumber > 999) {
+			throw new Error(
+				`Cannot generate unique copy name: too many copies of "${baseName}"`
+			);
+		}
+
+		return newName;
 	}
 }
