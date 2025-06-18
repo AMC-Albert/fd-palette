@@ -67,8 +67,7 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 		"--no-ignore"
 	],
 	"ripOpen.boostGitDirectories": true,
-	"ripOpen.includeWorkspaceFiles": true,
-	"ripOpen.excludeHomeDotFolders": true
+	"ripOpen.includeWorkspaceFiles": true
 }
 ```
 

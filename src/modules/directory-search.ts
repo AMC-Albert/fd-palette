@@ -592,15 +592,12 @@ export class DirectorySearcher {
 				// ignore errors
 			}
 		}
-
 		// Convert directories to DirectoryItem array
 		const directoryItems: DirectoryItem[] = Array.from(directories)
 			.filter((dir) => {
 				const dirName = path.basename(dir);
-				const shouldExcludeDotFolders =
-					ConfigurationManager.shouldExcludeHomeDotFolders();
 				const isDotFolder = dirName.startsWith(".");
-				return !isDotFolder || !shouldExcludeDotFolders;
+				return !isDotFolder; // Always exclude dot folders
 			})
 			.map((fullPath) => ({
 				label: path.basename(fullPath),
@@ -699,16 +696,11 @@ export class DirectorySearcher {
 					} else if (item.itemType === ItemType.WorkspaceFile) {
 						workspaceFiles.add(item.fullPath);
 					}
-				}
-
-				// Convert to array and prepare for fzf sorting
+				} // Convert to array and prepare for fzf sorting
 				const dirArray = Array.from(directories)
 					.filter((dir) => {
 						const dirName = path.basename(dir);
-						return (
-							!dirName.startsWith(".") ||
-							ConfigurationManager.shouldExcludeHomeDotFolders() === false
-						);
+						return !dirName.startsWith("."); // Always exclude dot folders
 					})
 					.sort(); // Convert workspace files to array
 				const workspaceArray = Array.from(workspaceFiles);
@@ -764,15 +756,16 @@ export class DirectorySearcher {
 
 					resolve(combinedItems);
 					return;
-				} // Use fzf for enhanced sorting/ranking (filter mode)
-				// Using empty filter should return all items with fzf's ranking
-				const baseFilterArgs = searchParams.fzfFilterArgs
+				}
+				// Use fzf for enhanced sorting/ranking (ranking mode)
+				// Using fzf without --filter to rank all items
+				const baseRankingArgs = searchParams.fzfRankingArgs
 					.split(" ")
 					.filter((arg) => arg.trim());
 				const fzfOptionsArgs = searchParams.fzfOptions
 					.split(" ")
 					.filter((arg) => arg.trim());
-				const fzfArgs = [...baseFilterArgs, ...fzfOptionsArgs];
+				const fzfArgs = [...baseRankingArgs, ...fzfOptionsArgs];
 				console.log(
 					`rip-open: Running fzf for ranking: ${
 						searchParams.fzfPath

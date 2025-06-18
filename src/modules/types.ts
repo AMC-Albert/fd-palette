@@ -24,6 +24,7 @@ export interface SearchParams {
 	fzfPath: string;
 	fzfOptions: string;
 	fzfFilterArgs: string;
+	fzfRankingArgs: string;
 	additionalRipgrepArgs: string[];
 	boostGitDirectories: boolean;
 	includeWorkspaceFiles: boolean;

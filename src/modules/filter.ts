@@ -86,28 +86,36 @@ export class DirectoryFilter {
 					`${key} ${dirName} ${dirNameSpaced} ${dirNameNoSep} ${normalizedPath}`
 				);
 			}
+			const input = inputLines.join("\n");
 
-			const input = inputLines.join("\n"); // fzf arguments optimized for performance
 			// Get search parameters for fzf options
 			const searchParams = ConfigurationManager.getSearchParams();
+
+			// Split user fzf filter args and filter out empty strings
+			const userFilterArgs = searchParams.fzfFilterArgs
+				.split(" ")
+				.filter((arg: string) => arg.trim());
 
 			// Split user fzf options and filter out empty strings
 			const userFzfOptions = searchParams.fzfOptions
 				.split(" ")
 				.filter((arg: string) => arg.trim());
 
-			// Performance-optimized fzf arguments
-			const fzfArgs = [
+			// Core non-interactive arguments (always required for filter mode)
+			const coreArgs = [
 				"--filter",
 				query, // Non-interactive filtering mode
-				"--algo=v1", // Use faster v1 algorithm for better performance
-				"+x", // Disable extended search
 				"--delimiter",
 				" ", // Use space as delimiter
 				"--with-nth",
 				"2..", // Only search in text after the key
-				"--tiebreak=length", // Simple tiebreaker for performance
-				...userFzfOptions, // Add compatible user options
+			];
+
+			// Combine core args with user customizable args
+			const fzfArgs = [
+				...coreArgs,
+				...userFilterArgs, // User filter-specific options (algorithm, tiebreaker, etc.)
+				...userFzfOptions, // User general fzf options
 			];
 
 			console.log(`rip-open: filter.ts spawning fzf with path: ${fzfPath}`);

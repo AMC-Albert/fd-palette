@@ -24,7 +24,10 @@ export class ConfigurationManager {
 				"--scheme=path --tiebreak=pathname,length --smart-case",
 			fzfFilterArgs:
 				config.get<string>("fzfFilterArgs") ||
-				"--filter --read0 --print0 --no-info --no-scrollbar",
+				"--algo=v1 --tiebreak=length --no-info --no-scrollbar",
+			fzfRankingArgs:
+				config.get<string>("fzfRankingArgs") ||
+				"--print0 --read0 --no-info --no-scrollbar",
 			additionalRipgrepArgs: config.get<string[]>("additionalRipgrepArgs") || [
 				"--max-depth=10",
 				"--hidden",
@@ -154,10 +157,6 @@ export class ConfigurationManager {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return config.get<boolean>("enableCache") ?? true;
 	}
-	static shouldExcludeHomeDotFolders(): boolean {
-		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-		return config.get<boolean>("excludeHomeDotFolders") ?? true;
-	}
 	static getUiDisplayLimit(): number {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 		return config.get<number>("uiDisplayLimit") ?? 100;
@@ -179,8 +178,7 @@ export class ConfigurationManager {
 		);
 		if (choice !== "Reset Settings") {
 			return;
-		}
-		// Reset all settings to undefined (which restores defaults)
+		} // Reset all settings to undefined (which restores defaults)
 		const settingsToReset = [
 			"searchPath",
 			"excludePatterns",
@@ -189,12 +187,12 @@ export class ConfigurationManager {
 			"fzfOptions",
 			"enableCache",
 			"enableBackgroundRefresh",
-			"excludeHomeDotFolders",
 			"uiDisplayLimit",
 			"boostGitDirectories",
 			"includeWorkspaceFiles",
 			"additionalRipgrepArgs",
 			"fzfFilterArgs",
+			"fzfRankingArgs",
 		];
 
 		try {

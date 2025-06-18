@@ -231,13 +231,13 @@
 				},
 				"ripOpen.fzfFilterArgs": {
 					"type": "string",
-					"default": "--filter --read0 --print0 --no-info --no-scrollbar",
-					"description": "Arguments to pass to fzf when used in filter mode for ranking results"
+					"default": "--algo=v1 --tiebreak=length --no-info --no-scrollbar",
+					"description": "Additional arguments to pass to fzf in filter mode (core arguments like --filter are automatically handled)"
 				},
-				"ripOpen.excludeHomeDotFolders": {
-					"type": "boolean",
-					"default": true,
-					"description": "Exclude dot folders (folders starting with .) from search results"
+				"ripOpen.fzfRankingArgs": {
+					"type": "string",
+					"default": "--print0 --read0 --no-info --no-scrollbar",
+					"description": "Arguments to pass to fzf when ranking all items without filtering"
 				}
 			}
 		}
