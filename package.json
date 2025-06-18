@@ -38,6 +38,16 @@
 				"category": "RipOpen"
 			},
 			{
+				"command": "rip-open.replaceWithParentFolder",
+				"title": "Replace Workspace with Parent Folder",
+				"category": "RipOpen"
+			},
+			{
+				"command": "rip-open.openParentFolder",
+				"title": "Open Parent Folder",
+				"category": "RipOpen"
+			},
+			{
 				"command": "rip-open.createFolder",
 				"title": "Create Folder",
 				"category": "RipOpen"

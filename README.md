@@ -83,6 +83,7 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 | `RipOpen: Open Directory in Current Window`      | `Ctrl+Alt+O`       | Search and open in current window     |
 | `RipOpen: Open Directory in New Window`          | `Ctrl+Alt+Shift+O` | Search and open in new window         |
 | `RipOpen: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace |
+| `RipOpen: Replace Workspace with Parent Folder`  | -                  | Replace workspace with parent folder  |
 | `RipOpen: Clear Search Cache`                    | -                  | Force cache refresh                   |
 | `RipOpen: Reset Settings to Default`             | -                  | Reset all settings to default values  |
 

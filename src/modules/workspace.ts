@@ -155,19 +155,10 @@ export class WorkspaceManager {
 
 		// Use the forceNewWindow parameter directly instead of config
 		const openInWindow = forceNewWindow;
-
 		if (directories.length === 1) {
 			// Single directory - open it directly
 			const directory = directories[0];
-			await vscode.commands.executeCommand(
-				"vscode.openFolder",
-				vscode.Uri.file(directory.fullPath),
-				openInWindow
-			);
-			const action = openInWindow ? "new window" : "current window";
-			await this.showTimedInfoMessage(
-				`Opened ${path.basename(directory.fullPath)} in ${action}`
-			);
+			await this.openSingleDirectory(directory.fullPath, openInWindow);
 		} else {
 			// Multiple directories - create a workspace file or ask user what to do
 			await this.handleMultipleDirectories(directories, openInWindow);
@@ -306,6 +297,7 @@ export class WorkspaceManager {
 			throw new Error("Failed to remove existing workspace folders");
 		}
 	}
+
 	/**
 	 * Replace all workspace folders with new ones (remove existing + add new)
 	 */
@@ -422,6 +414,95 @@ export class WorkspaceManager {
 			await MessageUtils.showError(
 				`Failed to replace workspace folders: ${error}`
 			);
+			throw error;
+		}
+	}
+
+	/**
+	 * Replace workspace with parent folder of current workspace folder
+	 */
+	static async replaceWorkspaceWithParentFolder(): Promise<void> {
+		try {
+			const result = await this.getParentDirectoryFromWorkspace();
+			if (!result) {
+				return; // Error already shown or user cancelled
+			}
+
+			const { parentPath } = result;
+
+			// Create DirectoryItem for the parent folder
+			const parentDirectoryItem: DirectoryItem = {
+				label: path.basename(parentPath),
+				description: parentPath,
+				fullPath: parentPath,
+				itemType: ItemType.Directory,
+			};
+
+			// Replace workspace with parent folder
+			await this.replaceWorkspaceFolders([parentDirectoryItem]);
+
+			console.log(
+				`rip-open: Replaced workspace with parent folder: ${parentPath}`
+			);
+		} catch (error) {
+			console.error(
+				`rip-open: Error in replaceWorkspaceWithParentFolder:`,
+				error
+			);
+			await MessageUtils.showError(
+				`Failed to replace workspace with parent folder: ${error}`
+			);
+			throw error;
+		}
+	}
+
+	/**
+	 * Open parent folder of current workspace folder in VS Code
+	 */
+	static async openParentFolder(): Promise<void> {
+		try {
+			const result = await this.getParentDirectoryFromWorkspace();
+			if (!result) {
+				return; // Error already shown or user cancelled
+			}
+
+			const { parentPath } = result;
+
+			// Ask user how to open the parent folder
+			const openChoice = await vscode.window.showQuickPick(
+				[
+					{
+						label: "Open in Current Window",
+						description: "Replace current workspace with parent folder",
+					},
+					{
+						label: "Open in New Window",
+						description: "Open parent folder in a new VS Code window",
+					},
+				],
+				{
+					placeHolder: `How would you like to open ${path.basename(
+						parentPath
+					)}?`,
+				}
+			);
+
+			if (!openChoice) {
+				return; // User cancelled
+			}
+			const forceNewWindow = openChoice.label === "Open in New Window";
+
+			// Open the parent folder using the shared helper
+			await this.openSingleDirectory(parentPath, forceNewWindow);
+
+			console.log(
+				`rip-open: Opened parent folder in ${
+					forceNewWindow ? "new window" : "current window"
+				}: ${parentPath}`
+			);
+		} catch (error) {
+			console.error(`rip-open: Error in openParentFolder:`, error);
+			await MessageUtils.showError(`Failed to open parent folder: ${error}`);
 			throw error;
 		}
 	}
@@ -657,5 +738,83 @@ export class WorkspaceManager {
 			await MessageUtils.showError(`Failed to create folder: ${error}`);
 			throw error;
 		}
+	}
+
+	/**
+	 * Open a single directory in VS Code
+	 */
+	private static async openSingleDirectory(
+		directoryPath: string,
+		forceNewWindow: boolean = false
+	): Promise<void> {
+		await vscode.commands.executeCommand(
+			"vscode.openFolder",
+			vscode.Uri.file(directoryPath),
+			forceNewWindow
+		);
+		const action = forceNewWindow ? "new window" : "current window";
+		await this.showTimedInfoMessage(
+			`Opened ${path.basename(directoryPath)} in ${action}`
+		);
+	}
+
+	/**
+	 * Get parent directory of a workspace folder, with user selection if multiple folders exist
+	 */
+	private static async getParentDirectoryFromWorkspace(): Promise<{
+		parentPath: string;
+		originalPath: string;
+	} | null> {
+		const workspaceFolders = vscode.workspace.workspaceFolders;
+		if (!workspaceFolders || workspaceFolders.length === 0) {
+			await MessageUtils.showError("No workspace folders are open");
+			return null;
+		}
+
+		let selectedFolder: vscode.WorkspaceFolder;
+
+		if (workspaceFolders.length === 1) {
+			// Only one workspace folder, use it
+			selectedFolder = workspaceFolders[0];
+		} else {
+			// Multiple workspace folders, prompt user to choose
+			const items = workspaceFolders.map((folder) => ({
+				label: path.basename(folder.uri.fsPath),
+				description: folder.uri.fsPath,
+				folder: folder,
+			}));
+
+			const choice = await vscode.window.showQuickPick(items, {
+				placeHolder: "Select workspace folder to get parent of",
+			});
+
+			if (!choice) {
+				return null; // User cancelled
+			}
+
+			selectedFolder = choice.folder;
+		}
+
+		// Get parent directory
+		const currentPath = selectedFolder.uri.fsPath;
+		const parentPath = path.dirname(currentPath);
+
+		// Check if we're already at the root
+		if (parentPath === currentPath) {
+			await MessageUtils.showError(
+				`Cannot go up from root directory: ${currentPath}`
+			);
+			return null;
+		}
+
+		// Check if parent directory exists
+		if (!FileUtils.existsSync(parentPath)) {
+			await MessageUtils.showError(
+				`Parent directory does not exist: ${parentPath}`
+			);
+			return null;
+		}
+
+		return { parentPath, originalPath: currentPath };
 	}
 }

@@ -22,7 +22,8 @@ export function activate(context: vscode.ExtensionContext) {
 	// Initialize services
 	const configManager = new ConfigurationManager();
 	cacheManager = new CacheManager(context);
-	searchOrchestrator = new SearchOrchestrator(cacheManager); // Start cache preloading in background
+	searchOrchestrator = new SearchOrchestrator(cacheManager);
+	// Start cache preloading in background
 	cacheManager.preloadCacheInBackground();
 
 	// Register commands
@@ -78,6 +79,20 @@ export function activate(context: vscode.ExtensionContext) {
 			await WorkspaceManager.removeSelectedFolder();
 		}
 	);
+	const replaceWithParentCommand = vscode.commands.registerCommand(
+		"rip-open.replaceWithParentFolder",
+		async () => {
+			await WorkspaceManager.replaceWorkspaceWithParentFolder();
+		}
+	);
+
+	const openParentFolderCommand = vscode.commands.registerCommand(
+		"rip-open.openParentFolder",
+		async () => {
+			await WorkspaceManager.openParentFolder();
+		}
+	);
+
 	context.subscriptions.push(
 		addToWorkspaceCommand,
 		replaceWorkspaceCommand,
@@ -86,7 +101,9 @@ export function activate(context: vscode.ExtensionContext) {
 		openInNewWindowCommand,
 		clearCacheCommand,
 		resetSettingsCommand,
-		removeSelectedFolderCommand
+		removeSelectedFolderCommand,
+		replaceWithParentCommand,
+		openParentFolderCommand
 	);
 }
 
