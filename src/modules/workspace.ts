@@ -192,7 +192,9 @@ export class WorkspaceManager {
 				);
 			}
 			await this.showTimedInfoMessage(
-				`Opened ${directories.length} directories in separate windows`			);		} else {
+				`Opened ${directories.length} directories in separate windows`
+			);
+		} else {
 			// Create a workspace with all folders - prompt user to save it
 			try {
 				// Create workspace content with all selected directories
@@ -204,9 +206,9 @@ export class WorkspaceManager {
 				const saveUri = await vscode.window.showSaveDialog({
 					defaultUri: vscode.Uri.file(`workspace-${Date.now()}.code-workspace`),
 					filters: {
-						'VS Code Workspace': ['code-workspace']
+						"VS Code Workspace": ["code-workspace"],
 					},
-					saveLabel: 'Save Workspace'
+					saveLabel: "Save Workspace",
 				});
 
 				if (!saveUri) {
@@ -527,6 +529,43 @@ export class WorkspaceManager {
 			console.error(`rip-open: Error in openParentFolder:`, error);
 			await MessageUtils.showError(`Failed to open parent folder: ${error}`);
 			throw error;
+		}
+	}
+
+	/**
+	 * Close and delete the current workspace file
+	 */
+	static async closeAndDeleteWorkspace(): Promise<void> {
+		const workspaceFile = vscode.workspace.workspaceFile;
+
+		if (!workspaceFile) {
+			await MessageUtils.showError("No workspace file is currently open");
+			return;
+		}
+
+		// Get the workspace file path
+		const workspaceFilePath = workspaceFile.fsPath;
+		const workspaceFileName = path.basename(workspaceFilePath);
+
+		try {
+			// Wait a moment for the new window to open
+			setTimeout(async () => {
+				try {
+					// Delete the workspace file
+					const fs = await import("fs/promises");
+					await fs.unlink(workspaceFilePath);
+
+					await MessageUtils.showInfo(
+						`Workspace file "${workspaceFileName}" has been deleted`
+					);
+				} catch (error) {
+					await MessageUtils.showError(
+						`Failed to delete workspace file: ${error}`
+					);
+				}
+			}, 1000);
+		} catch (error) {
+			await MessageUtils.showError(`Failed to close workspace: ${error}`);
 		}
 	}
 

@@ -123,6 +123,7 @@ After selecting directories, you'll be prompted to choose from context-aware act
 | `RipOpen: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace          |
 | `RipOpen: Replace Workspace with Parent Folder`  | -                  | Replace workspace with parent folder           |
 | `RipOpen: Open Parent Folder`                    | -                  | Open parent folder (prompts for window choice) |
+| `RipOpen: Close and Delete Workspace`            | -                  | Close workspace and delete the workspace file  |
 
 ### Utility Commands
 

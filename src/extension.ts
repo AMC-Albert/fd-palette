@@ -90,6 +90,12 @@ export function activate(context: vscode.ExtensionContext) {
 			await searchOrchestrator.searchAndPromptForAction();
 		}
 	);
+	const closeAndDeleteWorkspaceCommand = vscode.commands.registerCommand(
+		"rip-open.closeAndDeleteWorkspace",
+		async () => {
+			await WorkspaceManager.closeAndDeleteWorkspace();
+		}
+	);
 	context.subscriptions.push(
 		addToWorkspaceCommand,
 		replaceWorkspaceCommand,
@@ -100,7 +106,8 @@ export function activate(context: vscode.ExtensionContext) {
 		removeSelectedFolderCommand,
 		replaceWithParentCommand,
 		openParentFolderCommand,
-		unifiedSearchCommand
+		unifiedSearchCommand,
+		closeAndDeleteWorkspaceCommand
 	);
 }
 

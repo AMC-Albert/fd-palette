@@ -76,6 +76,11 @@
 				"command": "rip-open.removeSelectedFolder",
 				"title": "Remove Selected Folder from Workspace",
 				"category": "RipOpen"
+			},
+			{
+				"command": "rip-open.closeAndDeleteWorkspace",
+				"title": "Close and Delete Workspace",
+				"category": "RipOpen"
 			}
 		],
 		"keybindings": [
