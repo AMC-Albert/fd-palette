@@ -116,6 +116,9 @@ After selecting directories, you'll be prompted to choose from context-aware act
 | `ripScope: Replace Workspace`            | -                  | Search and replace entire workspace                |
 | `ripScope: Create Folder`                | -                  | Search and create new folder                       |
 | `ripScope: Open Folder`                  | -                  | Search and open folder (prompts for window choice) |
+| `ripScope: Copy`                         | -                  | Search and copy folder (prompts for destination)   |
+| `ripScope: Move`                         | -                  | Search and move folder (prompts for destination)   |
+| `ripScope: Delete`                       | -                  | Search and delete folder                           |
 
 ### Workspace Management Commands
 
