@@ -343,7 +343,7 @@ export class DirectoryFilter {
 			.filter((part) => part.length > 0);
 		// Score each directory based on how well it matches the query
 		const searchParams = ConfigurationManager.getSearchParams();
-		const shouldBoostGitDirs = searchParams.boostGitDirectories;
+		const shouldBoostGitDirs = searchParams.boostGitRepos;
 
 		const scoredDirectories = directories.map((dir, originalIndex) => {
 			const dirName = path.basename(dir.fullPath).toLowerCase();

@@ -9,10 +9,12 @@ System-wide directory search and workspace management using [ripgrep](https://gi
 
 ## Features
 
+- **Unified directory search workflow**: Single command with post-selection action prompts for streamlined usage
 - **Fast directory discovery**: Uses ripgrep to find directories across specified search paths.
 - **Intelligent caching**: Results cached for 2 minutes with automatic background refresh.
 - **Enhanced fuzzy matching**: Optional fzf integration for superior search quality.
 - **Multi-path search**: Search across multiple root directories simultaneously.
+- **Context-aware actions**: Action options adapt based on single vs. multiple directory selection.
 - **Workspace management**:
   - Add directories to workspace or replace entire workspace with new selections.
   - Open .code-workspace files directly, or extract and add their folder paths to the current workspace.
@@ -29,6 +31,22 @@ When fzf is available and actively filtering, visual indicators show match quali
 - Standard VS Code letter highlighting for basic matches.
 
 Large datasets automatically use VS Code's built-in fuzzy matching without quality indicators.
+
+The **Search Directories** command (`Ctrl+Alt+S`) provides a streamlined workflow:
+
+1. **Search and Select**: Use the directory picker to find and select one or more folders
+2. **Choose Action**: After selection, choose what to do with your folders from context-aware options
+
+### Custom Keybindings
+
+Most commands don't have default keybindings to avoid conflicts. You can assign your own keybindings through VS Code's Keyboard Shortcuts settings (`Ctrl+K Ctrl+S`) or by adding them to your `keybindings.json`:
+
+```json
+{
+  "key": "ctrl+alt+d",
+  "command": "rip-open.addToWorkspace"
+}
+```
 
 ## Configuration
 
@@ -68,24 +86,50 @@ Large datasets automatically use VS Code's built-in fuzzy matching without quali
 		"--hidden",
 		"--no-ignore"
 	],
-	"ripOpen.boostGitDirectories": true,
+	"ripOpen.boostGitRepos": true,
 	"ripOpen.includeWorkspaceFiles": true
 }
 ```
 
 ## Commands
 
-| Command                                          | Default Keybinding | Description                           |
-| ------------------------------------------------ | ------------------ | ------------------------------------- |
-| `RipOpen: Add Directories to Workspace`          | `Ctrl+Alt+D`       | Search and add to workspace           |
-| `RipOpen: Replace Workspace`                     | `Ctrl+Alt+R`       | Search and replace entire workspace   |
-| `RipOpen: Create Folder`                         | `Ctrl+Alt+Shift+N` | Search and create new folder          |
-| `RipOpen: Open Directory in Current Window`      | `Ctrl+Alt+O`       | Search and open in current window     |
-| `RipOpen: Open Directory in New Window`          | `Ctrl+Alt+Shift+O` | Search and open in new window         |
-| `RipOpen: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace |
-| `RipOpen: Replace Workspace with Parent Folder`  | -                  | Replace workspace with parent folder  |
-| `RipOpen: Clear Search Cache`                    | -                  | Force cache refresh                   |
-| `RipOpen: Reset Settings to Default`             | -                  | Reset all settings to default values  |
+### Primary Command (Recommended)
+
+| Command                       | Default Keybinding | Description                                             |
+| ----------------------------- | ------------------ | ------------------------------------------------------- |
+| `RipOpen: Search Directories` | `Ctrl+Alt+S`       | **Unified search** - select folders, then choose action |
+
+After selecting directories, you'll be prompted to choose from context-aware actions:
+
+- **Add to Workspace** - Add selected folders to current workspace
+- **Replace Workspace** - Replace entire workspace with selected folders
+- **Open in Current Window** - Replace current workspace and open folders
+- **Open in New Window** - Open folders in new VS Code window
+- **Create Folder** _(single selection only)_ - Create new folder inside selected directory
+
+### Direct Action Commands
+
+| Command                                 | Default Keybinding | Description                                        |
+| --------------------------------------- | ------------------ | -------------------------------------------------- |
+| `RipOpen: Add Directories to Workspace` | -                  | Search and add to workspace                        |
+| `RipOpen: Replace Workspace`            | -                  | Search and replace entire workspace                |
+| `RipOpen: Create Folder`                | -                  | Search and create new folder                       |
+| `RipOpen: Open Folder`                  | -                  | Search and open folder (prompts for window choice) |
+
+### Workspace Management Commands
+
+| Command                                          | Default Keybinding | Description                                    |
+| ------------------------------------------------ | ------------------ | ---------------------------------------------- |
+| `RipOpen: Remove Selected Folder from Workspace` | `Ctrl+Shift+Del`   | Remove selected folder from workspace          |
+| `RipOpen: Replace Workspace with Parent Folder`  | -                  | Replace workspace with parent folder           |
+| `RipOpen: Open Parent Folder`                    | -                  | Open parent folder (prompts for window choice) |
+
+### Utility Commands
+
+| Command                              | Default Keybinding | Description                          |
+| ------------------------------------ | ------------------ | ------------------------------------ |
+| `RipOpen: Clear Search Cache`        | -                  | Force cache refresh                  |
+| `RipOpen: Reset Settings to Default` | -                  | Reset all settings to default values |
 
 ## Performance Notes
 

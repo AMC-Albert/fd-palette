@@ -192,28 +192,51 @@ export class WorkspaceManager {
 				);
 			}
 			await this.showTimedInfoMessage(
-				`Opened ${directories.length} directories in separate windows`
-			);
-		} else {
-			// Create a new workspace with all folders
-			const folders = directories.map((dir) => ({
-				uri: vscode.Uri.file(dir.fullPath),
-			}));
-			await vscode.workspace.updateWorkspaceFolders(0, 0, ...folders);
+				`Opened ${directories.length} directories in separate windows`			);		} else {
+			// Create a workspace with all folders - prompt user to save it
+			try {
+				// Create workspace content with all selected directories
+				const workspaceContent = {
+					folders: directories.map((dir) => ({ path: dir.fullPath })),
+				};
 
-			if (openInWindow) {
-				// Save current workspace and open in window
-				await vscode.commands.executeCommand(
-					"workbench.action.files.saveWorkspaceAs"
+				// Prompt user to save the workspace file
+				const saveUri = await vscode.window.showSaveDialog({
+					defaultUri: vscode.Uri.file(`workspace-${Date.now()}.code-workspace`),
+					filters: {
+						'VS Code Workspace': ['code-workspace']
+					},
+					saveLabel: 'Save Workspace'
+				});
+
+				if (!saveUri) {
+					// User cancelled
+					return;
+				}
+
+				// Write the workspace file
+				const fs = await import("fs/promises");
+				await fs.writeFile(
+					saveUri.fsPath,
+					JSON.stringify(workspaceContent, null, 2)
+				);
+
+				// Open the workspace file
+				await vscode.commands.executeCommand("vscode.openFolder", saveUri, {
+					forceNewWindow: openInWindow,
+				});
+
+				const folderNames = directories
+					.map((dir) => path.basename(dir.fullPath))
+					.join(", ");
+				await this.showTimedInfoMessage(
+					`Created and opened workspace with ${directories.length} folders: ${folderNames}`
+				);
+			} catch (error) {
+				await MessageUtils.showError(
+					`Failed to create workspace file: ${error}`
 				);
 			}
-			const folderNames = directories
-				.map((dir) => path.basename(dir.fullPath))
-				.join(", ");
-			const action = openInWindow ? "new window" : "current window";
-			await this.showTimedInfoMessage(
-				`Created workspace with ${directories.length} folders in ${action}: ${folderNames}`
-			);
 		}
 	}
 

@@ -39,7 +39,6 @@ export function activate(context: vscode.ExtensionContext) {
 			await searchOrchestrator.searchAndReplaceWorkspace();
 		}
 	);
-
 	const createFolderCommand = vscode.commands.registerCommand(
 		"rip-open.createFolder",
 		async () => {
@@ -47,17 +46,10 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	);
 
-	const openInCurrentWindowCommand = vscode.commands.registerCommand(
-		"rip-open.openInCurrentWindow",
+	const openFolderCommand = vscode.commands.registerCommand(
+		"rip-open.openFolder",
 		async () => {
-			await searchOrchestrator.searchAndOpenInCurrentWindow();
-		}
-	);
-
-	const openInNewWindowCommand = vscode.commands.registerCommand(
-		"rip-open.openInNewWindow",
-		async () => {
-			await searchOrchestrator.searchAndOpenInNewWindow();
+			await searchOrchestrator.searchAndOpenFolder();
 		}
 	);
 
@@ -92,18 +84,23 @@ export function activate(context: vscode.ExtensionContext) {
 			await WorkspaceManager.openParentFolder();
 		}
 	);
-
+	const unifiedSearchCommand = vscode.commands.registerCommand(
+		"rip-open.unifiedSearch",
+		async () => {
+			await searchOrchestrator.searchAndPromptForAction();
+		}
+	);
 	context.subscriptions.push(
 		addToWorkspaceCommand,
 		replaceWorkspaceCommand,
 		createFolderCommand,
-		openInCurrentWindowCommand,
-		openInNewWindowCommand,
+		openFolderCommand,
 		clearCacheCommand,
 		resetSettingsCommand,
 		removeSelectedFolderCommand,
 		replaceWithParentCommand,
-		openParentFolderCommand
+		openParentFolderCommand,
+		unifiedSearchCommand
 	);
 }
 

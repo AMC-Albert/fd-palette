@@ -11,22 +11,22 @@ export class SearchOrchestrator {
 	async searchAndAddDirectories(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.AddToWorkspace);
 	}
-
 	async searchAndReplaceWorkspace(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.ReplaceWorkspace);
 	}
 
-	async searchAndOpenInCurrentWindow(): Promise<void> {
-		await this.performDirectorySearch(DirectoryAction.OpenInWindow, false);
-	}
-
-	async searchAndOpenInNewWindow(): Promise<void> {
-		await this.performDirectorySearch(DirectoryAction.OpenInWindow, true);
+	async searchAndOpenFolder(): Promise<void> {
+		await this.performDirectorySearch(DirectoryAction.OpenInWindow);
 	}
 
 	async searchAndCreateFolder(): Promise<void> {
 		await this.performDirectorySearch(DirectoryAction.CreateFolder);
 	}
+
+	async searchAndPromptForAction(): Promise<void> {
+		await this.performDirectorySearch(DirectoryAction.PromptForAction);
+	}
+
 	private async performDirectorySearch(
 		action: DirectoryAction,
 		forceNewWindow: boolean = false

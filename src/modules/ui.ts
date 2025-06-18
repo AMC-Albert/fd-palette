@@ -60,7 +60,8 @@ export class DirectoryPicker {
 		quickPick.items = initialItems;
 		quickPick.canSelectMany =
 			action === DirectoryAction.AddToWorkspace ||
-			action === DirectoryAction.ReplaceWorkspace;
+			action === DirectoryAction.ReplaceWorkspace ||
+			action === DirectoryAction.PromptForAction;
 
 		const updatePlaceholder = () => {
 			const searchTerm = quickPick.value.trim();
@@ -196,18 +197,44 @@ export class DirectoryPicker {
 				// No explicit selection, use the active/highlighted item
 				itemsToProcess = [quickPick.activeItems[0]];
 			}
-
 			if (itemsToProcess.length > 0) {
 				try {
-					if (action === DirectoryAction.AddToWorkspace) {
+					if (action === DirectoryAction.PromptForAction) {
+						// Hide the current picker and show action selection
+						quickPick.hide();
+						await DirectoryPicker.promptForActionAndExecute(itemsToProcess);
+					} else if (action === DirectoryAction.AddToWorkspace) {
 						await WorkspaceManager.addDirectoriesToWorkspace(itemsToProcess);
 					} else if (action === DirectoryAction.ReplaceWorkspace) {
 						await WorkspaceManager.replaceWorkspaceFolders(itemsToProcess);
 					} else if (action === DirectoryAction.CreateFolder) {
 						// For CreateFolder, only use the first selected directory
 						await WorkspaceManager.createFolderInDirectory(itemsToProcess[0]);
-					} else {
-						// For OpenInWindow action, use the forceNewWindow parameter
+					} else if (action === DirectoryAction.OpenInWindow) {
+						// For OpenInWindow action, prompt user for window choice
+						const openChoice = await vscode.window.showQuickPick(
+							[
+								{
+									label: "Open in Current Window",
+									description:
+										"Replace current workspace with selected folder(s)",
+								},
+								{
+									label: "Open in New Window",
+									description: "Open selected folder(s) in new VS Code window",
+								},
+							],
+							{
+								placeHolder: `How would you like to open ${itemsToProcess.length} folder(s)?`,
+							}
+						);
+
+						if (!openChoice) {
+							quickPick.dispose();
+							return; // User cancelled
+						}
+
+						const forceNewWindow = openChoice.label === "Open in New Window";
 						await WorkspaceManager.openDirectoriesInNewWindow(
 							itemsToProcess,
 							forceNewWindow
@@ -221,7 +248,9 @@ export class DirectoryPicker {
 							? "replacing"
 							: action === DirectoryAction.CreateFolder
 							? "creating folder in"
-							: "opening";
+							: action === DirectoryAction.OpenInWindow
+							? "opening"
+							: "processing";
 					vscode.window.showErrorMessage(
 						`Error ${actionText} directories: ${error}`
 					);
@@ -235,7 +264,10 @@ export class DirectoryPicker {
 				}, 2000);
 			}
 
-			quickPick.dispose();
+			// Only dispose if not using PromptForAction (which hides the picker instead)
+			if (action !== DirectoryAction.PromptForAction) {
+				quickPick.dispose();
+			}
 		});
 
 		// Handle hiding/cancellation
@@ -251,5 +283,106 @@ export class DirectoryPicker {
 		quickPick.onDidChangeSelection(() => {
 			// UI is responsive
 		});
+	}
+
+	static async promptForActionAndExecute(
+		selectedDirectories: DirectoryItem[]
+	): Promise<void> {
+		const actionChoices = [];
+		// Context-aware options based on selection
+		const isMultipleSelection = selectedDirectories.length > 1;
+		const selectionText = isMultipleSelection
+			? `${selectedDirectories.length} folders`
+			: `"${DirectoryPicker.getCleanDisplayName(selectedDirectories[0])}"`;
+
+		// Always available actions
+		actionChoices.push({
+			label: "$(add) Add to Workspace",
+			description: `Add ${selectionText} to current workspace`,
+			action: DirectoryAction.AddToWorkspace,
+		});
+
+		actionChoices.push({
+			label: "$(replace-all) Replace Workspace",
+			description: `Replace current workspace with ${selectionText}`,
+			action: DirectoryAction.ReplaceWorkspace,
+		});
+
+		// Open actions - adapt text based on selection count
+		if (isMultipleSelection) {
+			actionChoices.push({
+				label: "$(window) Open in Current Window",
+				description: `Replace current workspace and open ${selectionText}`,
+				action: DirectoryAction.OpenInWindow,
+				forceNewWindow: false,
+			});
+
+			actionChoices.push({
+				label: "$(multiple-windows) Open in New Window",
+				description: `Open ${selectionText} in new VS Code window`,
+				action: DirectoryAction.OpenInWindow,
+				forceNewWindow: true,
+			});
+		} else {
+			actionChoices.push({
+				label: "$(window) Open in Current Window",
+				description: `Replace current workspace with ${selectionText}`,
+				action: DirectoryAction.OpenInWindow,
+				forceNewWindow: false,
+			});
+
+			actionChoices.push({
+				label: "$(multiple-windows) Open in New Window",
+				description: `Open ${selectionText} in new VS Code window`,
+				action: DirectoryAction.OpenInWindow,
+				forceNewWindow: true,
+			});
+		}
+
+		// Create Folder action - only for single directory selection (excluding workspace files)
+		if (
+			!isMultipleSelection &&
+			selectedDirectories[0].itemType !== ItemType.WorkspaceFile
+		) {
+			actionChoices.push({
+				label: "$(new-folder) Create Folder",
+				description: `Create a new folder inside ${selectionText}`,
+				action: DirectoryAction.CreateFolder,
+			});
+		}
+		const selectedAction = await vscode.window.showQuickPick(actionChoices, {
+			placeHolder: `Choose an action:`,
+			matchOnDescription: true,
+		});
+
+		if (!selectedAction) {
+			return; // User cancelled
+		}
+
+		try {
+			if (selectedAction.action === DirectoryAction.AddToWorkspace) {
+				await WorkspaceManager.addDirectoriesToWorkspace(selectedDirectories);
+			} else if (selectedAction.action === DirectoryAction.ReplaceWorkspace) {
+				await WorkspaceManager.replaceWorkspaceFolders(selectedDirectories);
+			} else if (selectedAction.action === DirectoryAction.CreateFolder) {
+				await WorkspaceManager.createFolderInDirectory(selectedDirectories[0]);
+			} else if (selectedAction.action === DirectoryAction.OpenInWindow) {
+				const forceNewWindow = (selectedAction as any).forceNewWindow;
+				await WorkspaceManager.openDirectoriesInNewWindow(
+					selectedDirectories,
+					forceNewWindow
+				);
+			}
+		} catch (error) {
+			const actionText = selectedAction.label.replace(/^\$\([^)]+\)\s*/, ""); // Remove icon from label
+			vscode.window.showErrorMessage(
+				`Error ${actionText.toLowerCase()}: ${error}`
+			);
+		}
+	}
+
+	private static getCleanDisplayName(directoryItem: DirectoryItem): string {
+		// Remove icon prefixes like "$(git-branch) ", "$(repo) " from labels
+		return directoryItem.label.replace(/^\$\([^)]+\)\s*/, "");
 	}
 }

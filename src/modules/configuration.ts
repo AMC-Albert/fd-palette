@@ -34,7 +34,7 @@ export class ConfigurationManager {
 				"--hidden",
 				"--no-ignore",
 			],
-			boostGitDirectories: config.get<boolean>("boostGitDirectories") ?? true,
+			boostGitRepos: config.get<boolean>("boostGitRepos") ?? true,
 			includeWorkspaceFiles:
 				config.get<boolean>("includeWorkspaceFiles") ?? true,
 		};
@@ -189,7 +189,7 @@ export class ConfigurationManager {
 			"enableCache",
 			"enableBackgroundRefresh",
 			"uiDisplayLimit",
-			"boostGitDirectories",
+			"boostGitRepos",
 			"includeWorkspaceFiles",
 			"additionalRipgrepArgs",
 			"fzfFilterArgs",

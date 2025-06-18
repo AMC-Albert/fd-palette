@@ -28,8 +28,13 @@
 	"contributes": {
 		"commands": [
 			{
+				"command": "rip-open.unifiedSearch",
+				"title": "Search Directories",
+				"category": "RipOpen"
+			},
+			{
 				"command": "rip-open.addToWorkspace",
-				"title": "Add Directories to Workspace",
+				"title": "Add Folders to Workspace",
 				"category": "RipOpen"
 			},
 			{
@@ -53,13 +58,8 @@
 				"category": "RipOpen"
 			},
 			{
-				"command": "rip-open.openInCurrentWindow",
-				"title": "Open Directory in Current Window",
-				"category": "RipOpen"
-			},
-			{
-				"command": "rip-open.openInNewWindow",
-				"title": "Open Directory in New Window",
+				"command": "rip-open.openFolder",
+				"title": "Open Folder",
 				"category": "RipOpen"
 			},
 			{
@@ -80,29 +80,9 @@
 		],
 		"keybindings": [
 			{
-				"command": "rip-open.addToWorkspace",
-				"key": "ctrl+alt+d",
-				"mac": "cmd+alt+d"
-			},
-			{
-				"command": "rip-open.replaceWorkspace",
-				"key": "ctrl+alt+r",
-				"mac": "cmd+alt+r"
-			},
-			{
-				"command": "rip-open.createFolder",
-				"key": "ctrl+alt+shift+n",
-				"mac": "cmd+alt+shift+n"
-			},
-			{
-				"command": "rip-open.openInCurrentWindow",
-				"key": "ctrl+alt+o",
-				"mac": "cmd+alt+o"
-			},
-			{
-				"command": "rip-open.openInNewWindow",
-				"key": "ctrl+alt+shift+o",
-				"mac": "cmd+alt+shift+o"
+				"command": "rip-open.unifiedSearch",
+				"key": "ctrl+alt+s",
+				"mac": "cmd+alt+s"
 			},
 			{
 				"command": "rip-open.removeSelectedFolder",
@@ -237,10 +217,10 @@
 					"default": 100,
 					"description": "Maximum number of items to display in the UI before requiring filtering"
 				},
-				"ripOpen.boostGitDirectories": {
+				"ripOpen.boostGitRepos": {
 					"type": "boolean",
 					"default": true,
-					"description": "Give higher priority to directories that contain a .git folder (git repositories)"
+					"description": "Give higher priority to git repos (folders that contain a .git folder)"
 				},
 				"ripOpen.includeWorkspaceFiles": {
 					"type": "boolean",

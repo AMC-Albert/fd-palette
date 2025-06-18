@@ -26,7 +26,7 @@ export interface SearchParams {
 	fzfFilterArgs: string;
 	fzfRankingArgs: string;
 	additionalRipgrepArgs: string[];
-	boostGitDirectories: boolean;
+	boostGitRepos: boolean;
 	includeWorkspaceFiles: boolean;
 }
 
@@ -35,4 +35,5 @@ export enum DirectoryAction {
 	ReplaceWorkspace = "replaceWorkspace",
 	OpenInWindow = "openInWindow",
 	CreateFolder = "createFolder",
+	PromptForAction = "promptForAction",
 }
