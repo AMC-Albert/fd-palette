@@ -43,7 +43,7 @@ export class ConfigurationManager {
 		const searchParams = this.getSearchParams();
 		const searchPaths = searchParams.searchPath;
 
-		// If no paths configured, return empty array (search from root)
+		// If no paths configured, return empty array (search from home directory)
 		if (!searchPaths || searchPaths.length === 0) {
 			return [];
 		}
@@ -71,7 +71,7 @@ export class ConfigurationManager {
 			console.warn(
 				`rip-open: No valid directories found in searchPath: ${searchPaths.join(
 					", "
-				)}, using root search`
+				)}, using home directory search`
 			);
 		} else {
 			console.log(

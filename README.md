@@ -5,7 +5,7 @@ System-wide directory search and workspace management using [ripgrep](https://gi
 ## Requirements
 
 - **ripgrep**: Comes bundled with VS Code (auto-detected).
-- **fzf** (optional but highly reccommended): Enhanced fuzzy matching and ranking.
+- **fzf** Enhanced fuzzy matching and ranking. Optional but highly reccommended. Ripgrep can find the fzf executable for you in your system if it's not in your PATH.
 
 ## Features
 

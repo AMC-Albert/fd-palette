@@ -89,7 +89,7 @@
 						"type": "string"
 					},
 					"default": [],
-					"description": "List of search paths for directory search - first valid directory wins (leave empty to search from root)"
+					"description": "List of search paths for directory search - first valid directory wins (leave empty to search from home directory)"
 				},
 				"ripOpen.excludePatterns": {
 					"type": "array",
@@ -251,14 +251,14 @@
 		"test": "vscode-test"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.90.0",
 		"@types/mocha": "^10.0.10",
 		"@types/node": "20.x",
-		"@typescript-eslint/eslint-plugin": "^8.31.1",
-		"@typescript-eslint/parser": "^8.31.1",
-		"eslint": "^9.25.1",
-		"typescript": "^5.8.3",
+		"@types/vscode": "^1.90.0",
+		"@typescript-eslint/eslint-plugin": "^8.34.1",
+		"@typescript-eslint/parser": "^8.34.1",
 		"@vscode/test-cli": "^0.0.10",
-		"@vscode/test-electron": "^2.5.2"
+		"@vscode/test-electron": "^2.5.2",
+		"eslint": "^9.29.0",
+		"typescript": "^5.8.3"
 	}
 }

@@ -351,10 +351,9 @@ export class DirectorySearcher {
 					resolve(allOutput);
 				}
 			};
-
-			// If no search paths, search from root
+			// If no search paths, search from home directory instead of VSCode installation directory
 			if (!searchPaths || searchPaths.length === 0) {
-				searchPaths = [""];
+				searchPaths = [os.homedir()];
 			}
 			// Run ripgrep for each search path
 			for (const searchPath of searchPaths) {
@@ -471,7 +470,9 @@ export class DirectorySearcher {
 
 			console.log(
 				`rip-open: Search paths: ${
-					searchPaths.length > 0 ? searchPaths.join(", ") : "none (root search)"
+					searchPaths.length > 0
+						? searchPaths.join(", ")
+						: "none (home directory search)"
 				}`
 			);
 			console.log(
@@ -511,7 +512,7 @@ export class DirectorySearcher {
 
 			console.log(
 				`rip-open: Found ${results.length} directories using ripgrep across ${
-					searchPaths.length || "root"
+					searchPaths.length || "home directory"
 				} search paths`
 			);
 
