@@ -177,6 +177,7 @@ export class SearchOrchestrator {
 
 	async searchForCopyDestination(): Promise<void> {
 		const sourceDirectories = (global as any).ripScopeCopySource;
+
 		if (!sourceDirectories || sourceDirectories.length === 0) {
 			await MessageUtils.showError(
 				"No source directories found for copy operation"
@@ -221,12 +222,14 @@ export class SearchOrchestrator {
 				(dir) => dir.itemType !== ItemType.WorkspaceFile
 			);
 
-			await DirectoryPicker.showDestinationPicker(
-				validDestinations,
-				sourceDirectories,
-				action
-			);
-			return;
+			if (validDestinations.length > 0) {
+				await DirectoryPicker.showDestinationPicker(
+					validDestinations,
+					sourceDirectories,
+					action
+				);
+				return;
+			}
 		}
 
 		// Perform fresh search for destinations
@@ -282,7 +285,6 @@ export class SearchOrchestrator {
 					if (error instanceof Error && error.message.includes("cancelled")) {
 						return;
 					}
-					console.error("Error during destination search:", error);
 					vscode.window.showErrorMessage(`Destination search failed: ${error}`);
 				}
 			}

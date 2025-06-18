@@ -118,13 +118,12 @@ export class DirectoryFilter {
 				...userFzfOptions, // User general fzf options
 			];
 
-			console.log(`rip-scope: filter.ts spawning fzf with path: ${fzfPath}`);
 			const fzfChild = spawn(fzfPath, fzfArgs, {
 				stdio: ["pipe", "pipe", "pipe"],
 			});
+
 			let output = "";
 			let hasError = false;
-
 			fzfChild.stdout?.on("data", (data) => {
 				output += data.toString();
 			});
@@ -133,6 +132,7 @@ export class DirectoryFilter {
 				console.warn(`rip-scope: fzf filter error: ${data.toString()}`);
 				hasError = true;
 			});
+
 			fzfChild.on("close", (code) => {
 				if (hasError || (code !== null && code !== 0)) {
 					// Fall back to enhanced fuzzy-like filtering if fzf fails
@@ -142,9 +142,7 @@ export class DirectoryFilter {
 					);
 					resolve(fallbackFiltered);
 					return;
-				}
-
-				// Parse fzf output and map back to DirectoryItem objects
+				} // Parse fzf output and map back to DirectoryItem objects
 				const matchedLines = output
 					.trim()
 					.split("\n")
@@ -182,9 +180,7 @@ export class DirectoryFilter {
 							matchedSet.add(dir.fullPath);
 						}
 					});
-				});
-
-				// Merge original matches with extra children before ranking
+				}); // Merge original matches with extra children before ranking
 				const finalMatches = matchedDirectories.concat(extraChildren);
 
 				const enhancedResults = DirectoryFilter.enhanceHierarchicalRanking(
@@ -194,9 +190,9 @@ export class DirectoryFilter {
 				);
 				resolve(enhancedResults);
 			});
-
 			fzfChild.on("error", (error) => {
 				console.warn(`rip-scope: fzf spawn error: ${error.message}`);
+				console.warn(`rip-scope: fzf error stack: ${error.stack}`);
 				// Fall back to enhanced simple filtering
 				const fallbackFiltered = DirectoryFilter.fallbackFilter(
 					datasetToFilter,
@@ -373,7 +369,6 @@ export class DirectoryFilter {
 				try {
 					if (cacheManager.isGitRepository(dir.fullPath)) {
 						score += 50; // Strong boost for git repositories - higher than most other boosts
-						// Debug log removed for reduced verbosity
 					}
 				} catch (error) {
 					// Ignore filesystem errors - just skip the boost
@@ -439,16 +434,6 @@ export class DirectoryFilter {
 
 			return a.originalIndex - b.originalIndex;
 		});
-		// Debug: show top scored directories (reduced verbosity)
-		// console.log("rip-scope: Top 5 scored directories:");
-		// enhancedScores.slice(0, 5).forEach((item, index) => {
-		// 	const isGit = cacheManager
-		// 		? cacheManager.isGitRepository(item.directory.fullPath)
-		// 		: false;
-		// 	console.log(
-		// 		`  ${index}: score=${item.score}, git=${isGit}, path=${item.directory.fullPath}`
-		// 	);
-		// });
 
 		return enhancedScores.map((item) => item.directory);
 	}

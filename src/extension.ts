@@ -99,12 +99,14 @@ export function activate(context: vscode.ExtensionContext) {
 	const selectMoveDestinationCommand = vscode.commands.registerCommand(
 		"rip-scope.selectMoveDestination",
 		async () => {
+			console.log("rip-scope: selectMoveDestination command executed");
 			await searchOrchestrator.searchForMoveDestination();
 		}
 	);
 	const selectCopyDestinationCommand = vscode.commands.registerCommand(
 		"rip-scope.selectCopyDestination",
 		async () => {
+			console.log("rip-scope: selectCopyDestination command executed");
 			await searchOrchestrator.searchForCopyDestination();
 		}
 	);

@@ -106,12 +106,8 @@ export class DirectoryPicker {
 								const positionQuality = Math.max(
 									0,
 									1 - finalPosition / totalResults
-								); // Debug: log the first few items to verify ordering (reduced verbosity)
-								// if (index < 3) {
-								// 	console.log(
-								// 		`rip-scope: UI item ${index}: ${dir.label} at ${dir.fullPath}`
-								// 	);
-								// }								// Check if this is a git repository
+								);
+
 								const isGitRepo = cacheManager
 									? cacheManager.isGitRepository(dir.fullPath)
 									: false;
@@ -284,7 +280,6 @@ export class DirectoryPicker {
 			// UI is responsive
 		});
 	}
-
 	static async promptForActionAndExecute(
 		selectedDirectories: DirectoryItem[]
 	): Promise<void> {
@@ -370,7 +365,6 @@ export class DirectoryPicker {
 			description: `Permanently delete ${selectionText}`,
 			action: DirectoryAction.Delete,
 		});
-
 		const selectedAction = await vscode.window.showQuickPick(actionChoices, {
 			placeHolder: `Choose an action:`,
 			matchOnDescription: true,
@@ -401,7 +395,7 @@ export class DirectoryPicker {
 				await DirectoryPicker.handleCopyAction(selectedDirectories);
 			}
 		} catch (error) {
-			const actionText = selectedAction.label.replace(/^\$\([^)]+\)\s*/, ""); // Remove icon from label
+			const actionText = selectedAction.label.replace(/^[\$\([^)]+\)\s]*/, ""); // Remove icon from label
 			vscode.window.showErrorMessage(
 				`Error ${actionText.toLowerCase()}: ${error}`
 			);
@@ -415,8 +409,9 @@ export class DirectoryPicker {
 	static async handleMoveAction(
 		sourceDirectories: DirectoryItem[]
 	): Promise<void> {
-		await vscode.window.showInformationMessage(
-			`Move operation: Select destination for ${sourceDirectories.length} item(s).`,
+		// Don't await the info message to avoid blocking
+		vscode.window.showInformationMessage(
+			`Move operation: Select destination for ${sourceDirectories.length} item(s). A new search will open.`,
 			{ modal: false }
 		);
 
@@ -427,34 +422,32 @@ export class DirectoryPicker {
 		try {
 			await vscode.commands.executeCommand("rip-scope.selectMoveDestination");
 		} catch (error) {
-			console.error(
-				"rip-scope: Error executing selectMoveDestination command:",
-				error
-			);
 			vscode.window.showErrorMessage(
 				`Failed to open destination search: ${error}`
 			);
 		}
 	}
-
 	static async handleCopyAction(
 		sourceDirectories: DirectoryItem[]
 	): Promise<void> {
-		// Show info message without waiting for it to prevent blocking
+		// Don't await the info message to avoid blocking
 		vscode.window.showInformationMessage(
-			`Copy operation: Select destination for ${sourceDirectories.length} item(s).`
+			`Copy operation: Select destination for ${sourceDirectories.length} item(s). A new search will open.`,
+			{ modal: false }
 		);
 
 		// Store the source directories globally for the destination selection
 		(global as any).ripScopeCopySource = sourceDirectories;
 
-		// Add a small delay to potentially help with focus issues
-		await new Promise((resolve) => setTimeout(resolve, 100));
-
 		// Trigger a new unified search for destination selection
-		await vscode.commands.executeCommand("rip-scope.selectCopyDestination");
+		try {
+			await vscode.commands.executeCommand("rip-scope.selectCopyDestination");
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				`Failed to open destination search: ${error}`
+			);
+		}
 	}
-
 	static async showDestinationPicker(
 		directories: DirectoryItem[],
 		sourceDirectories: DirectoryItem[],
