@@ -1,6 +1,9 @@
 import * as path from "path";
 import * as os from "os";
 import * as fs from "fs";
+import * as crypto from "crypto";
+import * as vscode from "vscode";
+import { spawn } from "child_process";
 
 export class PathUtils {
 	/**
@@ -200,6 +203,294 @@ export class PathUtils {
 		} catch (error) {
 			console.warn("rip-open: Error detecting bundled ripgrep:", error);
 			return null;
+		}
+	}
+}
+
+export class ProcessUtils {
+	/**
+	 * Check if a command is available by running it with --version
+	 */
+	static async checkCommandAvailability(
+		commandPath: string,
+		expectedOutput?: string
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			const process = spawn(commandPath, ["--version"], {
+				stdio: ["ignore", "pipe", "pipe"],
+			});
+
+			let output = "";
+			process.stdout?.on("data", (data) => {
+				output += data.toString();
+			});
+
+			process.on("close", (code) => {
+				if (code === 0) {
+					// If expectedOutput is provided, check for it in the output
+					if (expectedOutput && !output.includes(expectedOutput)) {
+						reject(
+							new Error(
+								`${commandPath} check failed - expected output not found`
+							)
+						);
+					} else {
+						resolve();
+					}
+				} else {
+					reject(new Error(`${commandPath} check failed with code ${code}`));
+				}
+			});
+
+			process.on("error", (error) => {
+				reject(error);
+			});
+		});
+	}
+
+	/**
+	 * Spawn a process with standard error handling
+	 */
+	static spawnWithErrorHandling(
+		command: string,
+		args: string[],
+		options: any = {}
+	) {
+		const defaultOptions = {
+			stdio: ["pipe", "pipe", "pipe"],
+			...options,
+		};
+
+		return spawn(command, args, defaultOptions);
+	}
+}
+
+export class FileUtils {
+	private static _handleSync<T>(fn: () => T, errorMsg: string, fallback: T): T {
+		try {
+			return fn();
+		} catch (error) {
+			console.warn(errorMsg, error);
+			return fallback;
+		}
+	}
+
+	private static async _handleAsync<T>(
+		fn: () => Promise<T>,
+		errorMsg: string,
+		fallback: T
+	): Promise<T> {
+		try {
+			return await fn();
+		} catch (error) {
+			console.warn(errorMsg, error);
+			return fallback;
+		}
+	}
+
+	static existsSync(filePath: string): boolean {
+		return this._handleSync(
+			() => fs.existsSync(filePath),
+			`rip-open: Error checking file existence for ${filePath}:`,
+			false
+		);
+	}
+
+	static async readFile(
+		filePath: string,
+		encoding: BufferEncoding = "utf8"
+	): Promise<string | null> {
+		return this._handleAsync(
+			() => fs.promises.readFile(filePath, encoding),
+			`rip-open: Error reading file ${filePath}:`,
+			null
+		);
+	}
+
+	static readFileSync(
+		filePath: string,
+		encoding: BufferEncoding = "utf8"
+	): string | null {
+		return this._handleSync(
+			() => fs.readFileSync(filePath, encoding),
+			`rip-open: Error reading file (sync) ${filePath}:`,
+			null
+		);
+	}
+
+	static async writeFile(
+		filePath: string,
+		data: string,
+		encoding: BufferEncoding = "utf8"
+	): Promise<boolean> {
+		return this._handleAsync(
+			() => fs.promises.writeFile(filePath, data, encoding).then(() => true),
+			`rip-open: Error writing file ${filePath}:`,
+			false
+		);
+	}
+
+	static async mkdir(
+		dirPath: string,
+		recursive: boolean = true
+	): Promise<boolean> {
+		return this._handleAsync(
+			() => fs.promises.mkdir(dirPath, { recursive }).then(() => true),
+			`rip-open: Error creating directory ${dirPath}:`,
+			false
+		);
+	}
+
+	static mkdirSync(dirPath: string, recursive: boolean = true): boolean {
+		return this._handleSync(
+			() => {
+				fs.mkdirSync(dirPath, { recursive });
+				return true;
+			},
+			`rip-open: Error creating directory (sync) ${dirPath}:`,
+			false
+		);
+	}
+
+	static readdirSync(dirPath: string): string[] {
+		return this._handleSync(
+			() => fs.readdirSync(dirPath),
+			`rip-open: Error reading directory (sync) ${dirPath}:`,
+			[]
+		);
+	}
+}
+
+export class MessageUtils {
+	private static async _show(
+		type: "info" | "warning" | "error",
+		message: string,
+		timeout?: number
+	): Promise<void> {
+		let promise: Thenable<string | undefined>;
+		switch (type) {
+			case "info":
+				promise = vscode.window.showInformationMessage(message);
+				break;
+			case "warning":
+				promise = vscode.window.showWarningMessage(message);
+				break;
+			case "error":
+				promise = vscode.window.showErrorMessage(message);
+				break;
+			default:
+				promise = vscode.window.showInformationMessage(message);
+				break;
+		}
+		if (timeout) {
+			setTimeout(() => {
+				// No direct way to dismiss messages in VS Code
+			}, timeout);
+		}
+		await promise;
+	}
+
+	static async showInfo(message: string, timeout?: number): Promise<void> {
+		await this._show("info", message, timeout);
+	}
+
+	static async showWarning(message: string, timeout?: number): Promise<void> {
+		await this._show("warning", message, timeout);
+	}
+
+	static async showError(message: string, timeout?: number): Promise<void> {
+		await this._show("error", message, timeout);
+	}
+
+	static async showWithActions(
+		type: "info" | "warning" | "error",
+		message: string,
+		...actions: string[]
+	): Promise<string | undefined> {
+		switch (type) {
+			case "info":
+				return await vscode.window.showInformationMessage(message, ...actions);
+			case "warning":
+				return await vscode.window.showWarningMessage(message, ...actions);
+			case "error":
+				return await vscode.window.showErrorMessage(message, ...actions);
+			default:
+				return await vscode.window.showInformationMessage(message, ...actions);
+		}
+	}
+}
+
+export class HashUtils {
+	/**
+	 * Generate a consistent hash for cache keys
+	 */
+	static generateHash(input: string): string {
+		return crypto.createHash("md5").update(input).digest("hex").substring(0, 8);
+	}
+
+	/**
+	 * Generate a cache key with consistent formatting
+	 */
+	static generateCacheKey(prefix: string, ...parts: string[]): string {
+		const combined = parts.join("-");
+		const hash = this.generateHash(combined);
+		return `${prefix}-${hash}`;
+	}
+
+	/**
+	 * Generate a cache key for command availability
+	 */
+	static generateAvailabilityCacheKey(command: string, path?: string): string {
+		const parts = path ? [command, path] : [command];
+		return this.generateCacheKey("availability", ...parts);
+	}
+}
+
+export class CommandAvailabilityUtils {
+	static async checkAvailability(
+		extensionContext: vscode.ExtensionContext | undefined,
+		cacheKey: string,
+		commandPath: string,
+		expectedOutput?: string
+	): Promise<string | void> {
+		if (!extensionContext) {
+			// No context, just check
+			await ProcessUtils.checkCommandAvailability(commandPath, expectedOutput);
+			return commandPath;
+		}
+		const cached = extensionContext.globalState.get<{
+			available: boolean;
+			path?: string;
+		}>(cacheKey);
+		if (cached) {
+			if (cached.available) {
+				return cached.path || commandPath;
+			} else {
+				throw new Error(`${commandPath} command failed (cached result)`);
+			}
+		}
+		try {
+			await ProcessUtils.checkCommandAvailability(commandPath, expectedOutput);
+			await extensionContext.globalState.update(cacheKey, {
+				available: true,
+				path: commandPath,
+			});
+			return commandPath;
+		} catch (error) {
+			await extensionContext.globalState.update(cacheKey, {
+				available: false,
+				path: commandPath,
+			});
+			throw error;
+		}
+	}
+
+	static async invalidateCache(
+		extensionContext: vscode.ExtensionContext | undefined,
+		cacheKey: string
+	): Promise<void> {
+		if (extensionContext) {
+			await extensionContext.globalState.update(cacheKey, undefined);
 		}
 	}
 }

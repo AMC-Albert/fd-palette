@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { SearchParams } from "./types";
+import { MessageUtils } from "./utils";
 
 export class ConfigurationManager {
 	private static readonly CONFIG_SECTION = "ripOpen";
@@ -170,9 +171,9 @@ export class ConfigurationManager {
 		const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
 
 		// Show confirmation dialog
-		const choice = await vscode.window.showWarningMessage(
+		const choice = await MessageUtils.showWithActions(
+			"warning",
 			"Are you sure you want to reset all rip-open settings to their default values?",
-			{ modal: true },
 			"Reset Settings",
 			"Cancel"
 		);
@@ -201,15 +202,14 @@ export class ConfigurationManager {
 					config.update(setting, undefined, vscode.ConfigurationTarget.Global)
 				)
 			);
-			vscode.window.showInformationMessage(
-				"rip-open settings have been reset to default values.",
-				{ modal: false }
+			await MessageUtils.showInfo(
+				"rip-open settings have been reset to default values."
 			);
 			setTimeout(() => {
 				vscode.commands.executeCommand("workbench.action.closeMessages");
 			}, 3000);
 		} catch (error) {
-			vscode.window.showErrorMessage(`Failed to reset settings: ${error}`);
+			await MessageUtils.showError(`Failed to reset settings: ${error}`);
 		}
 	}
 	static getRipgrepPath(): string {

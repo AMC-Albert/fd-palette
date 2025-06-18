@@ -5,7 +5,12 @@ import * as os from "os";
 import * as fs from "fs";
 import { DirectoryItem, SearchParams, ItemType } from "./types";
 import { ConfigurationManager } from "./configuration";
-import { PathUtils } from "./utils";
+import {
+	PathUtils,
+	ProcessUtils,
+	FileUtils,
+	CommandAvailabilityUtils,
+} from "./utils";
 
 export class DirectorySearcher {
 	private static _extensionContext: vscode.ExtensionContext | undefined;
@@ -17,67 +22,24 @@ export class DirectorySearcher {
 	 * Check if ripgrep is available (either bundled or in PATH)
 	 */
 	static async checkRipgrepAvailability(): Promise<string> {
-		if (!this._extensionContext) {
-			// Fallback if context not set - just run the check
-			return this._getAvailableRipgrepPath();
-		}
-
-		// Check persistent cache first (no time-based expiration)
 		const cacheKey = "ripgrep-availability";
-		const cached = this._extensionContext.globalState.get<{
-			available: boolean;
-			path: string;
-		}>(cacheKey);
-
-		if (cached) {
-			if (cached.available) {
-				console.log(
-					`rip-open: ripgrep availability cache HIT - available: ${cached.path}`
-				);
-				return cached.path;
-			} else {
-				console.log("rip-open: ripgrep availability cache HIT - not available");
-				throw new Error("ripgrep command failed (cached result)");
-			}
-		}
-		// ripgrep availability cache MISS, checking...
-
-		// Not cached, check availability
-		try {
-			const rgPath = await this._getAvailableRipgrepPath();
-			// ripgrep availability check passed, caching result
-
-			// Cache the successful result (no timestamp needed)
-			await this._extensionContext.globalState.update(cacheKey, {
-				available: true,
-				path: rgPath,
-			});
-
-			return rgPath;
-		} catch (error) {
-			console.log(
-				`rip-open: ripgrep availability check failed, caching result: ${error}`
-			);
-
-			// Cache the failure (no timestamp needed)
-			await this._extensionContext.globalState.update(cacheKey, {
-				available: false,
-				path: "",
-			});
-
-			throw error;
-		}
+		return CommandAvailabilityUtils.checkAvailability(
+			this._extensionContext,
+			cacheKey,
+			await this._getAvailableRipgrepPath(),
+			"ripgrep"
+		) as Promise<string>;
 	}
 
 	/**
 	 * Invalidate ripgrep availability cache (call when ripgrep execution fails)
 	 */
 	static async invalidateRipgrepCache(): Promise<void> {
-		if (this._extensionContext) {
-			const cacheKey = "ripgrep-availability";
-			await this._extensionContext.globalState.update(cacheKey, undefined);
-			console.log("rip-open: ripgrep availability cache invalidated");
-		}
+		const cacheKey = "ripgrep-availability";
+		await CommandAvailabilityUtils.invalidateCache(
+			this._extensionContext,
+			cacheKey
+		);
 	}
 	/**
 	 * Get the first available ripgrep path based on user configuration
@@ -119,117 +81,46 @@ export class DirectorySearcher {
 			throw new Error("Neither bundled nor system ripgrep is available");
 		}
 	}
-
 	/**
 	 * Run ripgrep availability check
 	 */
 	private static async _runRipgrepAvailabilityCheck(
 		rgPath: string
 	): Promise<void> {
-		return new Promise((resolve, reject) => {
-			const process = spawn(rgPath, ["--version"], {
-				stdio: ["ignore", "pipe", "pipe"],
-			});
-
-			let output = "";
-			process.stdout?.on("data", (data) => {
-				output += data.toString();
-			});
-
-			process.on("close", (code) => {
-				if (code === 0 && output.includes("ripgrep")) {
-					resolve();
-				} else {
-					reject(new Error(`ripgrep check failed with code ${code}`));
-				}
-			});
-
-			process.on("error", (error) => {
-				reject(error);
-			});
-		});
+		return ProcessUtils.checkCommandAvailability(rgPath, "ripgrep");
 	}
 	/**
 	 * Check if fzf is available (for enhanced fuzzy matching)
 	 */
 	static async checkFzfAvailability(fzfPath: string): Promise<void> {
-		if (!this._extensionContext) {
-			// Fallback if context not set - just run the check
-			return this._runFzfAvailabilityCheck(fzfPath);
-		}
-
-		// Check persistent cache first (no time-based expiration)
 		const cacheKey = `fzf-availability-${fzfPath}`;
-		const cached = this._extensionContext.globalState.get<{
-			available: boolean;
-		}>(cacheKey);
-
-		if (cached) {
-			if (cached.available) {
-				console.log(
-					`rip-open: fzf availability cache HIT - available: ${fzfPath}`
-				);
-				return Promise.resolve();
-			} else {
-				console.log(
-					`rip-open: fzf availability cache HIT - not available: ${fzfPath}`
-				);
-				return Promise.reject(new Error("fzf command failed (cached result)"));
-			}
-		}
-
-		console.log(
-			`rip-open: fzf availability cache MISS for: ${fzfPath}, checking...`
+		await CommandAvailabilityUtils.checkAvailability(
+			this._extensionContext,
+			cacheKey,
+			fzfPath
 		);
-
-		// Not cached, check availability
-		try {
-			await this._runFzfAvailabilityCheck(fzfPath);
-			console.log(
-				`rip-open: fzf availability check passed, caching result: ${fzfPath}`
-			);
-
-			// Cache the successful result (no timestamp needed)
-			await this._extensionContext.globalState.update(cacheKey, {
-				available: true,
-			});
-		} catch (error) {
-			console.log(
-				`rip-open: fzf availability check failed, caching result: ${fzfPath}`
-			);
-
-			// Cache the failed result (no timestamp needed)
-			await this._extensionContext.globalState.update(cacheKey, {
-				available: false,
-			});
-			throw error;
-		}
 	}
 
 	/**
 	 * Invalidate fzf availability cache (call when fzf execution fails)
 	 */
 	static async invalidateFzfCache(fzfPath: string): Promise<void> {
-		if (this._extensionContext) {
-			const cacheKey = `fzf-availability-${fzfPath}`;
-			await this._extensionContext.globalState.update(cacheKey, undefined);
-			console.log(
-				`rip-open: fzf availability cache invalidated for: ${fzfPath}`
-			);
-		}
+		const cacheKey = `fzf-availability-${fzfPath}`;
+		await CommandAvailabilityUtils.invalidateCache(
+			this._extensionContext,
+			cacheKey
+		);
 	}
 
 	/**
 	 * Clear fzf availability cache for a specific path
 	 */
 	static async clearFzfCache(fzfPath: string): Promise<void> {
-		if (!this._extensionContext) {
-			return;
-		}
-
 		const cacheKey = `fzf-availability-${fzfPath}`;
-		await this._extensionContext.globalState.update(cacheKey, undefined);
-		console.log(`rip-open: Cleared fzf availability cache for: ${fzfPath}`);
+		await CommandAvailabilityUtils.invalidateCache(
+			this._extensionContext,
+			cacheKey
+		);
 	}
 
 	/**
@@ -880,7 +771,7 @@ export class DirectorySearcher {
 		const shouldUpdate =
 			currentFzfPath === "fzf" ||
 			(currentFzfPath !== "fzf" &&
-				!fs.existsSync(currentFzfPath) &&
+				!FileUtils.existsSync(currentFzfPath) &&
 				foundFzfPaths.length > 0);
 
 		if (shouldUpdate) {

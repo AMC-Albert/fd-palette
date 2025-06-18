@@ -4,6 +4,7 @@ import { DirectorySearcher } from "./directory-search";
 import { DirectoryPicker } from "./ui";
 import { ConfigurationManager } from "./configuration";
 import { DirectoryAction, DirectoryItem } from "./types";
+import { MessageUtils } from "./utils";
 
 export class SearchOrchestrator {
 	constructor(private cacheManager: CacheManager) {}
@@ -47,7 +48,7 @@ export class SearchOrchestrator {
 			rgPath = await DirectorySearcher.checkRipgrepAvailability();
 			// Reduced logging verbosity
 		} catch (error) {
-			vscode.window.showErrorMessage(`ripgrep is not available: ${error}`);
+			await MessageUtils.showError(`ripgrep is not available: ${error}`);
 			return;
 		}
 
@@ -88,9 +89,7 @@ export class SearchOrchestrator {
 					}
 					if (directories.length === 0) {
 						const noResultsMessage = `No directories found using ${searchMethod}.`;
-						vscode.window.showInformationMessage(noResultsMessage, {
-							modal: false,
-						});
+						await MessageUtils.showInfo(noResultsMessage);
 						setTimeout(() => {
 							vscode.commands.executeCommand("workbench.action.closeMessages");
 						}, 3000);

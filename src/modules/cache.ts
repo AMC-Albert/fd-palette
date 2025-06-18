@@ -4,6 +4,7 @@ import * as path from "path";
 import * as os from "os";
 import { CacheEntry, DirectoryItem, SearchParams } from "./types";
 import { ConfigurationManager } from "./configuration";
+import { FileUtils, HashUtils, MessageUtils } from "./utils";
 
 export class CacheManager {
 	private memoryCache = new Map<string, CacheEntry>();
@@ -41,13 +42,12 @@ export class CacheManager {
 			const globalStoragePath = this.extensionContext.globalStorageUri.fsPath;
 
 			// Ensure the base globalStorage directory exists first
-			if (!fs.existsSync(globalStoragePath)) {
-				fs.mkdirSync(globalStoragePath, { recursive: true });
+			if (!FileUtils.existsSync(globalStoragePath)) {
+				FileUtils.mkdirSync(globalStoragePath);
 			}
-
 			const cacheDir = path.join(globalStoragePath, "cache");
-			if (!fs.existsSync(cacheDir)) {
-				fs.mkdirSync(cacheDir, { recursive: true });
+			if (!FileUtils.existsSync(cacheDir)) {
+				FileUtils.mkdirSync(cacheDir);
 			}
 			this.cacheDir = cacheDir;
 			return cacheDir;
@@ -58,22 +58,16 @@ export class CacheManager {
 				error
 			);
 			const fallbackDir = path.join(os.tmpdir(), "rip-open-cache");
-			if (!fs.existsSync(fallbackDir)) {
-				fs.mkdirSync(fallbackDir, { recursive: true });
+			if (!FileUtils.existsSync(fallbackDir)) {
+				FileUtils.mkdirSync(fallbackDir);
 			}
 			this.cacheDir = fallbackDir;
 			return fallbackDir;
 		}
 	}
 	private getCacheFilePath(cacheKey: string, cacheDir?: string): string {
-		// Use a simple hash to create a short, predictable filename
-		let hash = 0;
-		for (let i = 0; i < cacheKey.length; i++) {
-			const char = cacheKey.charCodeAt(i);
-			hash = (hash << 5) - hash + char;
-			hash = hash & hash; // Convert to 32bit integer
-		}
-		const hashString = Math.abs(hash).toString(16);
+		// Use a consistent hash to create a short, predictable filename
+		const hashString = HashUtils.generateHash(cacheKey);
 		const basePath = cacheDir || this.getCacheDir();
 		return path.join(basePath, `cache_${hashString}.json`);
 	}
@@ -88,10 +82,10 @@ export class CacheManager {
 	cleanupOldCacheFiles(): void {
 		try {
 			const cacheDir = this.getCacheDir();
-			if (!fs.existsSync(cacheDir)) {
+			if (!FileUtils.existsSync(cacheDir)) {
 				return;
 			}
-			const files = fs.readdirSync(cacheDir);
+			const files = FileUtils.readdirSync(cacheDir);
 			const maxAge = 24 * 60 * 60 * 1000; // 24 hours for cleanup (keep cache files longer)
 			const now = Date.now();
 
@@ -100,7 +94,10 @@ export class CacheManager {
 					const filePath = path.join(cacheDir, file);
 					try {
 						const stats = fs.statSync(filePath);
-						const fileContent = fs.readFileSync(filePath, "utf8");
+						const fileContent = FileUtils.readFileSync(filePath, "utf8");
+						if (!fileContent) {
+							return;
+						}
 						const entry = JSON.parse(fileContent) as CacheEntry;
 
 						// Remove if very old or invalid version
@@ -154,13 +151,16 @@ export class CacheManager {
 				}
 			} // Load from file cache
 			const cacheDir = this.getCacheDir();
-			if (fs.existsSync(cacheDir)) {
+			if (FileUtils.existsSync(cacheDir)) {
 				const files = fs.readdirSync(cacheDir);
 				for (const file of files) {
 					if (file.endsWith(".json")) {
 						try {
 							const filePath = path.join(cacheDir, file);
-							const fileContent = fs.readFileSync(filePath, "utf8");
+							const fileContent = FileUtils.readFileSync(filePath, "utf8");
+							if (!fileContent) {
+								continue;
+							}
 							const entry = JSON.parse(fileContent) as CacheEntry;
 							if (entry && entry.version === 1) {
 								// Use the searchParams string as the cache key, same as everywhere else
@@ -192,8 +192,11 @@ export class CacheManager {
 			// Cache MISS in memory - try loading from disk immediately
 			try {
 				const cacheFilePath = this.getCacheFilePath(cacheKey);
-				if (fs.existsSync(cacheFilePath)) {
-					const fileContent = fs.readFileSync(cacheFilePath, "utf8");
+				if (FileUtils.existsSync(cacheFilePath)) {
+					const fileContent = FileUtils.readFileSync(cacheFilePath, "utf8");
+					if (!fileContent) {
+						return null;
+					}
 					const diskEntry = JSON.parse(fileContent) as CacheEntry;
 					if (diskEntry && diskEntry.version === 1) {
 						// Load into memory cache for next time
@@ -409,13 +412,7 @@ export class CacheManager {
 		if (useGlobalState) {
 			const globalStateStartTime = Date.now();
 			// Use simple hash for globalState key
-			let hash = 0;
-			for (let i = 0; i < cacheKey.length; i++) {
-				const char = cacheKey.charCodeAt(i);
-				hash = (hash << 5) - hash + char;
-				hash = hash & hash; // Convert to 32bit integer
-			}
-			const hashString = Math.abs(hash).toString(16);
+			const hashString = HashUtils.generateHash(cacheKey);
 			const diskCacheKey = `rip-open-cache-${hashString}`;
 			await this.extensionContext.globalState.update(diskCacheKey, entry);
 			console.log(
@@ -436,7 +433,7 @@ export class CacheManager {
 
 			try {
 				// Triple-check that the directory exists before getting the file path
-				if (!fs.existsSync(cacheDir)) {
+				if (!FileUtils.existsSync(cacheDir)) {
 					console.log(
 						"rip-open: Cache directory missing, recreating:",
 						cacheDir
@@ -446,14 +443,20 @@ export class CacheManager {
 				}
 
 				// Verify directory exists after creation attempt
-				if (!fs.existsSync(cacheDir)) {
+				if (!FileUtils.existsSync(cacheDir)) {
 					throw new Error(`Failed to create cache directory: ${cacheDir}`);
 				}
 				const cacheFilePath = this.getCacheFilePath(cacheKey, cacheDir); // Check if we need to write by comparing with existing file
 				let shouldWrite = true;
-				if (fs.existsSync(cacheFilePath)) {
+				if (FileUtils.existsSync(cacheFilePath)) {
 					try {
-						const existingContent = fs.readFileSync(cacheFilePath, "utf8");
+						const existingContent = FileUtils.readFileSync(
+							cacheFilePath,
+							"utf8"
+						);
+						if (!existingContent) {
+							return;
+						}
 						const existingEntry = JSON.parse(existingContent) as CacheEntry;
 
 						// Quick comparison: same number of directories means likely same content
@@ -490,7 +493,7 @@ export class CacheManager {
 
 					// Ensure parent directory of cache file exists (should be same as cacheDir)
 					const parentDir = path.dirname(cacheFilePath);
-					if (!fs.existsSync(parentDir)) {
+					if (!FileUtils.existsSync(parentDir)) {
 						console.log(
 							"rip-open: Parent directory missing, creating:",
 							parentDir
@@ -521,7 +524,7 @@ export class CacheManager {
 				);
 				console.error(
 					"rip-open: Cache directory exists:",
-					fs.existsSync(cacheDir)
+					FileUtils.existsSync(cacheDir)
 				);
 				console.error(
 					"rip-open: Attempted file path:",
@@ -560,10 +563,7 @@ export class CacheManager {
 		} catch (error) {
 			console.error("Error clearing file cache:", error);
 		}
-		vscode.window.showInformationMessage(
-			`Cache cleared. Removed ${memoryCacheSize} entries.`,
-			{ modal: false }
-		);
+		MessageUtils.showInfo(`Cache cleared. Removed ${memoryCacheSize} entries.`);
 		setTimeout(() => {
 			vscode.commands.executeCommand("workbench.action.closeMessages");
 		}, 2500);
@@ -633,7 +633,7 @@ export class CacheManager {
 		// Check filesystem and cache result
 		try {
 			const gitPath = path.join(dirPath, ".git");
-			const isGitRepo = fs.existsSync(gitPath);
+			const isGitRepo = FileUtils.existsSync(gitPath);
 			this.gitRepoCache.set(dirPath, isGitRepo);
 			return isGitRepo;
 		} catch (error) {

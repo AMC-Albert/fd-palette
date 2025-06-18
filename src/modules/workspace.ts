@@ -3,6 +3,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { DirectoryItem, DirectoryAction, ItemType } from "./types";
 import { ConfigurationManager } from "./configuration";
+import { FileUtils, MessageUtils } from "./utils";
 
 export class WorkspaceManager {
 	/**
@@ -81,7 +82,7 @@ export class WorkspaceManager {
 					`No valid directories found in workspace file(s). Invalid paths: ${invalidPathsList}${moreText}`
 				);
 			} else {
-				vscode.window.showInformationMessage(
+				await MessageUtils.showInfo(
 					"No valid directories found to add to workspace."
 				);
 			}
@@ -112,12 +113,12 @@ export class WorkspaceManager {
 					allInvalidPaths.length > 2
 						? ` and ${allInvalidPaths.length - 2} more`
 						: "";
-				vscode.window.showInformationMessage(message);
-				vscode.window.showWarningMessage(
+				await MessageUtils.showInfo(message);
+				await MessageUtils.showWarning(
 					`${allInvalidPaths.length} path(s) from workspace file(s) were invalid: ${invalidPathsList}${moreText}`
 				);
 			} else {
-				vscode.window.showInformationMessage(message);
+				await MessageUtils.showInfo(message);
 			}
 			return;
 		}
@@ -152,7 +153,7 @@ export class WorkspaceManager {
 				);
 			}
 		} else {
-			vscode.window.showErrorMessage("Failed to add directories to workspace.");
+			await MessageUtils.showError("Failed to add directories to workspace.");
 		}
 	}
 	static async openDirectoriesInNewWindow(
@@ -372,7 +373,7 @@ export class WorkspaceManager {
 						}
 
 						// Verify the path exists
-						if (fs.existsSync(folderPath)) {
+						if (FileUtils.existsSync(folderPath)) {
 							const stats = fs.statSync(folderPath);
 							if (stats.isDirectory()) {
 								extractedDirectories.push({
